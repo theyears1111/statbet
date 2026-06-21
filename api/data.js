@@ -7,9 +7,6 @@
 
 const API_BASE = "https://v3.football.api-sports.io";
 
-// ID dei campionati su API-Football. Verificali una volta con l'endpoint /leagues.
-// "season" è l'anno della stagione. I campionati europei sono fermi (stagione 2025
-// appena finita), il Mondiale è in corso (stagione 2026).
 const LEAGUES = [
   { id: 1,   name: "Mondiali",          season: 2026 },
   { id: 39,  name: "Premier League",    season: 2025 },
@@ -20,19 +17,14 @@ const LEAGUES = [
   { id: 2,   name: "Champions League",  season: 2025 },
 ];
 
-// Per proteggere il credito gratuito (100 richieste/giorno) analizziamo
-// al massimo questo numero di partite per aggiornamento.
 const MAX_MATCHES = 12;
 
-// Cache in memoria: se la funzione resta "calda", non rispende richieste.
 let CACHE = { key: null, at: 0, data: null };
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 ore
+const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
-function todayRome() {
-  const d = new Date();
-  // offset Europe/Rome (estate +2). Approssimazione sufficiente per la data.
-  const rome = new Date(d.getTime() + 2 * 60 * 60 * 1000);
-  return rome.toISOString().slice(0, 10);
+function todayUTC() {
+  // UTC puro — le partite mondiali sono in USA, l'API le indicizza in UTC
+  return new Date().toISOString().slice(0, 10);
 }
 
 async function af(path, key) {
@@ -45,7 +37,6 @@ async function af(path, key) {
   return { response: json.response || [], remaining };
 }
 
-// trasforma una fixture grezza nella prospettiva di una squadra
 function compactFixture(fx, teamId) {
   const isHome = fx.teams.home.id === teamId;
   const gf = isHome ? fx.goals.home : fx.goals.away;
@@ -69,9 +60,8 @@ const FT = new Set(["FT", "AET", "PEN"]);
 async function buildData(key) {
   let spent = 0;
   let remaining = null;
-  const date = todayRome();
+  const date = todayUTC();
 
-  // 1) partite di oggi per ogni campionato (1 richiesta a campionato)
   let todays = [];
   for (const lg of LEAGUES) {
     try {
@@ -81,16 +71,13 @@ async function buildData(key) {
       for (const fx of r.response) {
         todays.push({ fx, leagueName: lg.name, season: lg.season });
       }
-    } catch (e) {
-      // se un campionato non ha dati per la stagione indicata, lo saltiamo
-    }
+    } catch (e) {}
   }
 
   todays = todays.slice(0, MAX_MATCHES);
 
-  // 2) per ogni squadra coinvolta, le ultime 40 partite (1 richiesta a squadra)
   const teamCache = {};
-  async function lastFixtures(teamId, season) {
+  async function lastFixtures(teamId) {
     if (teamCache[teamId]) return teamCache[teamId];
     const r = await af(`/fixtures?team=${teamId}&last=40`, key);
     spent++;
@@ -107,10 +94,9 @@ async function buildData(key) {
   for (const t of todays) {
     const fx = t.fx;
     const homeId = fx.teams.home.id, awayId = fx.teams.away.id;
-    const homeFx = await lastFixtures(homeId, t.season);
-    const awayFx = await lastFixtures(awayId, t.season);
+    const homeFx = await lastFixtures(homeId);
+    const awayFx = await lastFixtures(awayId);
 
-    // 3) scontri diretti (1 richiesta a partita)
     let h2h = [];
     try {
       const r = await af(`/fixtures/headtohead?h2h=${homeId}-${awayId}&last=15`, key);
@@ -149,7 +135,7 @@ export default async function handler(req, res) {
     return;
   }
   const force = req.query && req.query.refresh === "1";
-  const cacheKey = todayRome();
+  const cacheKey = todayUTC();
   const now = Date.now();
   if (!force && CACHE.data && CACHE.key === cacheKey && now - CACHE.at < CACHE_TTL_MS) {
     res.status(200).json({ ...CACHE.data, cached: true });
