@@ -1,0 +1,7 @@
+{
+  "name": "statbet-terminal",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Analisi statistica partite per scommesse - dati da API-Football"
+}
