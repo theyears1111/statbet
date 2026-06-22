@@ -24,8 +24,6 @@ async function get(path, key, params = {}) {
   if (!res.ok) throw new Error(`TheStatsAPI ${res.status}: ${JSON.stringify(json).slice(0,200)}`);
   return json;
 }
-const FINISHED = new Set(["finished","ft","aet","pen","complete"]);
-function isFinished(m) { const s=(m.status||"").toLowerCase().replace(/[_\-\s]/g,""); return FINISHED.has(s)||s.includes("finish"); }
 function teamView(match, teamId) {
   const homeId = match.home_team?.id;
   const isHome = String(homeId)===String(teamId);
@@ -38,7 +36,7 @@ async function getAllPages(key, params) {
   const r1 = await get("/matches", key, { ...params, per_page: 50, page: 1 });
   all.push(...(r1.data||[]));
   const total = r1.meta?.total_pages||1;
-  for (let p = 2; p <= Math.min(total, 11); p++) {
+  for (let p = 2; p <= Math.min(total, 6); p++) {
     const r = await get("/matches", key, { ...params, per_page: 50, page: p });
     all.push(...(r.data||[]));
   }
@@ -55,10 +53,11 @@ async function buildData(key) {
       const params = { competition_id: comp.id };
       if (comp.season) params.season_id = comp.season;
       const all = await getAllPages(key, params);
-      spent += Math.ceil(all.length/50)||1;
+      spent += 2;
       for (const m of all) {
         const d = (m.utc_date||"").slice(0,10);
-        if (d >= today && d <= until) {
+        const name = m.home_team?.name||"";
+        if (d >= today && d <= until && !name.match(/^[W]\d+$/) && !name.match(/^\d/)) {
           todays.push({ ...m, _compName: comp.name });
         }
       }
@@ -73,31 +72,35 @@ async function buildData(key) {
     const tid = String(teamId);
     if (teamCache[tid]) return teamCache[tid];
     try {
-      const r = await get("/matches", key, { team_id: tid, per_page: 40, sort: "desc" }); spent++;
-      const list = (r.data||[]).filter(m=>isFinished(m)).slice(0,40).map(m=>teamView(m,teamId));
+      // Prendiamo solo le partite finite, ordinate dalla più recente
+      const r = await get("/matches", key, { team_id: tid, status: "finished", per_page: 40 });
+      spent++;
+      const list = (r.data||[]).slice(0,40).map(m=>teamView(m,teamId));
       teamCache[tid] = list; return list;
-    } catch(e) { errors.push(`team ${tid}: `+e.message); teamCache[tid]=[]; return []; }
+    } catch(e) {
+      errors.push(`team ${tid}: `+e.message);
+      teamCache[tid]=[]; return [];
+    }
   }
   const matches = [];
   let idx = 0;
   for (const m of todays) {
     const homeId = m.home_team?.id, awayId = m.away_team?.id;
     const homeName = m.home_team?.name||"Casa", awayName = m.away_team?.name||"Trasferta";
-    const compName = m._compName||"";
     const time = (m.utc_date||"").slice(11,16)||"--:--";
     const matchDate = (m.utc_date||"").slice(0,10);
-    if (!homeId||!awayId||homeName.startsWith("W")||homeName.match(/^\d/)) continue;
     const [homeFx, awayFx] = await Promise.all([teamHistory(homeId), teamHistory(awayId)]);
     let h2h = [];
     try {
-      const r = await get("/matches", key, { team_id: String(homeId), opponent_id: String(awayId), per_page: 15 }); spent++;
-      h2h = (r.data||[]).filter(x=>isFinished(x)).slice(0,10).map(x=>{
+      const r = await get("/matches", key, { team_id: String(homeId), opponent_id: String(awayId), status: "finished", per_page: 15 });
+      spent++;
+      h2h = (r.data||[]).slice(0,10).map(x=>{
         const hid=x.home_team?.id, hg=x.home_score??x.score?.home??null, ag=x.away_score??x.score?.away??null;
         const hhg=x.half_time_score?.home??null, hag=x.half_time_score?.away??null;
         return { d:(x.utc_date||"").slice(0,10), homeId:hid, hg, ag, hhg, hag };
       });
     } catch(e) {}
-    matches.push({ id: idx++, compId: m.competition_id, leagueName: compName, date: matchDate, time, home:{id:homeId,name:homeName,fixtures:homeFx}, away:{id:awayId,name:awayName,fixtures:awayFx}, h2h });
+    matches.push({ id: idx++, compId: m.competition_id, leagueName: m._compName, date: matchDate, time, home:{id:homeId,name:homeName,fixtures:homeFx}, away:{id:awayId,name:awayName,fixtures:awayFx}, h2h });
   }
   return { date: today, matches, spent, remaining: null, errors };
 }
