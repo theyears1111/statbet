@@ -11,18 +11,23 @@ const COMPETITIONS = [
   { id: "comp_408698", name: "Conference League", season: null },
   { id: "comp_2949", name: "EURO", season: null },
 ];
-const MAX_MATCHES = 30;
+const MAX_MATCHES = 20;
 let CACHE = { key: null, at: 0, data: null };
-const CACHE_TTL_MS = 3 * 60 * 60 * 1000;
+const CACHE_TTL_MS = 4 * 60 * 60 * 1000;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 function todayUTC() { return new Date().toISOString().slice(0, 10); }
 function plusDays(n) { const d = new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
-async function get(path, key, params = {}) {
+async function get(path, key, params = {}, retry = 3) {
   const url = new URL(API_BASE + path);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  const res = await fetch(url.toString(), { headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" } });
-  const json = await res.json();
-  if (!res.ok) throw new Error(`TheStatsAPI ${res.status}: ${JSON.stringify(json).slice(0,200)}`);
-  return json;
+  for (let i = 0; i < retry; i++) {
+    const res = await fetch(url.toString(), { headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" } });
+    const json = await res.json();
+    if (res.status === 429) { await sleep(2000 + i * 1000); continue; }
+    if (!res.ok) throw new Error(`TheStatsAPI ${res.status}: ${JSON.stringify(json).slice(0,200)}`);
+    return json;
+  }
+  throw new Error("Rate limit persistente dopo 3 tentativi");
 }
 function teamView(match, teamId) {
   const homeId = match.home_team?.id;
@@ -36,7 +41,8 @@ async function getAllPages(key, params) {
   const r1 = await get("/matches", key, { ...params, per_page: 50, page: 1 });
   all.push(...(r1.data||[]));
   const total = r1.meta?.total_pages||1;
-  for (let p = 2; p <= Math.min(total, 6); p++) {
+  for (let p = 2; p <= Math.min(total, 4); p++) {
+    await sleep(600);
     const r = await get("/matches", key, { ...params, per_page: 50, page: p });
     all.push(...(r.data||[]));
   }
@@ -50,6 +56,7 @@ async function buildData(key) {
   let todays = [];
   for (const comp of COMPETITIONS) {
     try {
+      await sleep(600);
       const params = { competition_id: comp.id };
       if (comp.season) params.season_id = comp.season;
       const all = await getAllPages(key, params);
@@ -57,7 +64,7 @@ async function buildData(key) {
       for (const m of all) {
         const d = (m.utc_date||"").slice(0,10);
         const name = m.home_team?.name||"";
-        if (d >= today && d <= until && !name.match(/^[W]\d+$/) && !name.match(/^\d/)) {
+        if (d >= today && d <= until && !name.match(/^W\d/) && !name.match(/^\d/)) {
           todays.push({ ...m, _compName: comp.name });
         }
       }
@@ -72,7 +79,7 @@ async function buildData(key) {
     const tid = String(teamId);
     if (teamCache[tid]) return teamCache[tid];
     try {
-      // Prendiamo solo le partite finite, ordinate dalla più recente
+      await sleep(600);
       const r = await get("/matches", key, { team_id: tid, status: "finished", per_page: 40 });
       spent++;
       const list = (r.data||[]).slice(0,40).map(m=>teamView(m,teamId));
@@ -89,9 +96,12 @@ async function buildData(key) {
     const homeName = m.home_team?.name||"Casa", awayName = m.away_team?.name||"Trasferta";
     const time = (m.utc_date||"").slice(11,16)||"--:--";
     const matchDate = (m.utc_date||"").slice(0,10);
-    const [homeFx, awayFx] = await Promise.all([teamHistory(homeId), teamHistory(awayId)]);
+    // Sequenziale, non parallelo, per rispettare rate limit
+    const homeFx = await teamHistory(homeId);
+    const awayFx = await teamHistory(awayId);
     let h2h = [];
     try {
+      await sleep(600);
       const r = await get("/matches", key, { team_id: String(homeId), opponent_id: String(awayId), status: "finished", per_page: 15 });
       spent++;
       h2h = (r.data||[]).slice(0,10).map(x=>{
