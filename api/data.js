@@ -1,5 +1,6 @@
 ﻿const API_BASE = "https://api.thestatsapi.com/api/football";
-const MAX_MATCHES = 15;
+const COMP_IDS = new Set(["comp_6107","comp_3039","comp_8814","comp_5840","comp_4643","comp_0256","comp_3498","comp_7739","comp_408698","comp_2949"]);
+const MAX_MATCHES = 20;
 let CACHE = { key: null, at: 0, data: null };
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 function todayUTC() { return new Date().toISOString().slice(0, 10); }
@@ -12,7 +13,7 @@ async function get(path, key, params = {}) {
   return json;
 }
 const FINISHED = new Set(["finished","ft","aet","pen","complete","full-time","fulltime"]);
-function isFinished(m) { const s=(m.status||m.match_status||"").toLowerCase().replace(/[_\-\s]/g,""); return FINISHED.has(s)||s.includes("finish")||s.includes("fulltime")||s.includes("ft"); }
+function isFinished(m) { const s=(m.status||m.match_status||"").toLowerCase().replace(/[_\-\s]/g,""); return FINISHED.has(s)||s.includes("finish")||s.includes("fulltime"); }
 function teamView(match, teamId) {
   const homeId = match.home_team?.id||match.home?.id;
   const isHome = String(homeId)===String(teamId);
@@ -25,9 +26,10 @@ async function buildData(key) {
   let spent=0, todays=[];
   try {
     const r=await get("/matches",key,{date,per_page:100}); spent++;
-    todays=(r.data||r.matches||r.results||(Array.isArray(r)?r:[])).slice(0,MAX_MATCHES);
+    const all=r.data||r.matches||r.results||(Array.isArray(r)?r:[]);
+    todays=all.filter(m=>{ const cid=m.competition?.id||m.competition_id||""; return COMP_IDS.has(cid); }).slice(0,MAX_MATCHES);
   } catch(e) { errors.push("matches: "+e.message); return {date,matches:[],spent,remaining:null,errors}; }
-  if(!todays.length) return {date,matches:[],spent,remaining:null,debug:"API ok ma 0 partite oggi",errors};
+  if(!todays.length) return {date,matches:[],spent,remaining:null,debug:"API ok ma 0 partite oggi nei campionati selezionati",errors};
   const teamCache={};
   async function teamHistory(teamId) {
     if(!teamId) return [];
@@ -40,6 +42,7 @@ async function buildData(key) {
     } catch(e) { errors.push(`team ${tid}: `+e.message); teamCache[tid]=[]; return []; }
   }
   const matches=[];
+  let idx=0;
   for(const m of todays) {
     const homeId=m.home_team?.id||m.home?.id, awayId=m.away_team?.id||m.away?.id;
     const homeName=m.home_team?.name||m.home?.name||"Casa", awayName=m.away_team?.name||m.away?.name||"Trasferta";
@@ -56,7 +59,7 @@ async function buildData(key) {
         return {d:(x.date||x.kickoff||"").slice(0,10),homeId:hid,hg,ag,hhg,hag};
       });
     } catch(e) { errors.push(`h2h: `+e.message); }
-    matches.push({id:m.id||m.match_id,compId,leagueName:compName,time,home:{id:homeId,name:homeName,fixtures:homeFx},away:{id:awayId,name:awayName,fixtures:awayFx},h2h});
+    matches.push({id:idx++,compId,leagueName:compName,time,home:{id:homeId,name:homeName,fixtures:homeFx},away:{id:awayId,name:awayName,fixtures:awayFx},h2h});
   }
   return {date,matches,spent,remaining:null,errors};
 }
