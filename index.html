@@ -303,9 +303,12 @@ async function loadAnalysis(force=false){
     // 1. Lista partite dalla settimana (veloce, usa /api/matches già caricato)
     let matches = ALL.length ? ALL : await fetch('/api/matches').then(r=>r.json()).then(j=>j.matches||[]);
     if(!matches.length) throw new Error('Nessuna partita trovata');
-
-    // Mostra progresso
-    const total = Math.min(matches.length, 20);
+    // Limita alle partite di oggi + domani per rispettare il rate limit API
+    const today=new Date().toISOString().slice(0,10);
+    const tomorrow=new Date(Date.now()+86400000).toISOString().slice(0,10);
+    const todayMatches=matches.filter(m=>m.date===today||m.date===tomorrow);
+    const toAnalyze=todayMatches.length>0?todayMatches:matches.slice(0,8);
+    const total=Math.min(toAnalyze.length,12);
     document.getElementById('analisi-content').innerHTML=
       '<div class="state"><div class="spinner"></div>' +
       'Caricamento dati squadre… (0/'+total+')<br>' +
@@ -317,8 +320,8 @@ async function loadAnalysis(force=false){
     const matchDataMap = {};
     const teamCache = {};
 
-    for(let i=0; i<Math.min(matches.length,20); i++){
-      const m = matches[i];
+    for(let i=0; i<total; i++){
+      const m = toAnalyze[i];
       // Aggiorna progresso
       const pct=Math.round((i+1)/total*100);
       document.getElementById('analisi-content').innerHTML=
@@ -330,19 +333,33 @@ async function loadAnalysis(force=false){
         '<div style="font-size:10px;color:#525B6F;margin-top:6px">'+pct+'% completato</div>' +
         '</div>';
 
-      // Carica squadre sequenzialmente per evitare rate limit
+      // Carica con retry in caso di rate limit
       const delay = ms => new Promise(r => setTimeout(r, ms));
+      async function fetchWithRetry(url, retries=3){
+        for(let i=0;i<retries;i++){
+          try{
+            const r=await fetch(url);
+            if(r.status===500||r.status===429){ await delay(2000+i*1000); continue; }
+            if(!r.ok) throw new Error('HTTP '+r.status);
+            return await r.json();
+          }catch(e){ if(i===retries-1)return null; await delay(1500); }
+        }
+        return null;
+      }
       if(!teamCache[m.homeId]){
-        try{ const r=await fetch('/api/team?id='+m.homeId).then(x=>x.json()); teamCache[m.homeId]=r.fixtures||[]; }catch(e){ teamCache[m.homeId]=[]; }
-        await delay(400);
+        const r=await fetchWithRetry('/api/team?id='+m.homeId);
+        teamCache[m.homeId]=r?.fixtures||[];
+        await delay(800);
       }
       if(!teamCache[m.awayId]){
-        try{ const r=await fetch('/api/team?id='+m.awayId).then(x=>x.json()); teamCache[m.awayId]=r.fixtures||[]; }catch(e){ teamCache[m.awayId]=[]; }
-        await delay(400);
+        const r=await fetchWithRetry('/api/team?id='+m.awayId);
+        teamCache[m.awayId]=r?.fixtures||[];
+        await delay(800);
       }
       let h2h=[];
-      try{ const r=await fetch('/api/h2h?home='+m.homeId+'&away='+m.awayId).then(x=>x.json()); h2h=r.h2h||[]; }catch(e){}
-      await delay(300);
+      const h2hR=await fetchWithRetry('/api/h2h?home='+m.homeId+'&away='+m.awayId);
+      if(h2hR) h2h=h2hR.h2h||[];
+      await delay(600);
 
       const homeFx = teamCache[m.homeId]||[];
       const awayFx = teamCache[m.awayId]||[];
