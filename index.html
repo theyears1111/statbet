@@ -13,10 +13,10 @@ body{font-family:var(--font);background:#0A0D13;color:#E6E9EF;min-height:100vh}
 .hd{padding:16px 20px;background:#12161F;border-bottom:1px solid #1C2230;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .hd-l{display:flex;align-items:center;gap:12px}
 .hd-logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#FF6B35,#D8431A);display:flex;align-items:center;justify-content:center;font-size:18px}
-.hd-brand{font-size:16px;font-weight:600;letter-spacing:-.01em}
+.hd-brand{font-size:16px;font-weight:600}
 .hd-sub{font-size:11px;color:#6B7488;margin-top:2px;display:flex;align-items:center;gap:5px}
 .live-dot{width:6px;height:6px;border-radius:50%;background:#2BD673;box-shadow:0 0 6px #2BD673}
-.btn{background:#1A202C;border:1px solid #232A38;border-radius:8px;padding:7px 12px;cursor:pointer;font-size:12px;color:#9AA4B8;display:flex;align-items:center;gap:5px}
+.btn{background:#1A202C;border:1px solid #232A38;border-radius:8px;padding:7px 12px;cursor:pointer;font-size:12px;color:#9AA4B8}
 .btn:hover{background:#222A38;color:#E6E9EF}
 .body{padding:14px 16px}
 .day-bar{display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap}
@@ -75,7 +75,6 @@ body{font-family:var(--font);background:#0A0D13;color:#E6E9EF;min-height:100vh}
 .ap{font-size:8px;background:rgba(255,107,53,.18);color:#FF8E5E;padding:2px 7px;border-radius:6px;text-transform:uppercase;font-weight:700}
 .sct{font-size:9px;font-weight:700;color:#6B7488;text-transform:uppercase;letter-spacing:.1em;margin:12px 0 7px;display:flex;align-items:center;gap:6px}
 .sct .sl{flex:1;height:1px;background:#1C2230;margin-left:3px}
-/* GRIGLIA 4 colonne per medie */
 .g4{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
 .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
 .g2{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}
@@ -84,14 +83,16 @@ body{font-family:var(--font);background:#0A0D13;color:#E6E9EF;min-height:100vh}
 .av.bl{background:linear-gradient(160deg,rgba(59,158,255,.08),transparent);border-color:rgba(59,158,255,.2)}
 .av.gr{background:linear-gradient(160deg,rgba(43,214,115,.08),transparent);border-color:rgba(43,214,115,.2)}
 .av.pu{background:linear-gradient(160deg,rgba(139,123,246,.08),transparent);border-color:rgba(139,123,246,.2)}
+.av.ye{background:linear-gradient(160deg,rgba(255,214,0,.08),transparent);border-color:rgba(255,214,0,.2)}
 .av-v{font-size:18px;font-weight:600;line-height:1}
 .av.hi .av-v{color:#FF8E5E}
 .av.bl .av-v{color:#6BB4FF}
 .av.gr .av-v{color:#4FDE8E}
 .av.pu .av-v{color:#A79BF8}
+.av.ye .av-v{color:#FFD700}
 .av-l{font-size:8px;color:#6B7488;margin-top:4px;text-transform:uppercase;letter-spacing:.04em}
 .av-s{font-size:7px;color:#525B6F;margin-top:2px}
-/* XG BOX speciale */
+/* XG BOX */
 .xgbox{background:linear-gradient(135deg,rgba(59,158,255,.1),rgba(59,158,255,.02));border:1px solid rgba(59,158,255,.22);border-radius:10px;padding:11px 13px;margin-bottom:5px}
 .xgbox-top{display:flex;align-items:center;gap:12px;margin-bottom:8px}
 .xg-big{font-size:28px;font-weight:600;color:#6BB4FF;letter-spacing:-.02em;line-height:1}
@@ -103,7 +104,20 @@ body{font-family:var(--font);background:#0A0D13;color:#E6E9EF;min-height:100vh}
 .xg-sig.warm{background:rgba(255,166,48,.16);color:#FFB958}
 .xg-sig.cool{background:rgba(59,158,255,.16);color:#6BB4FF}
 .xg-sig.flat{background:#1A202C;color:#7E8798}
-.xg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+/* SIGNAL BOX per big chances */
+.sig-box{border-radius:9px;padding:10px 12px;margin-bottom:5px;display:flex;align-items:center;gap:10px}
+.sig-box.hot{background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.25)}
+.sig-box.warm{background:rgba(255,166,48,.08);border:1px solid rgba(255,166,48,.22)}
+.sig-box.cool{background:rgba(59,158,255,.08);border:1px solid rgba(59,158,255,.2)}
+.sig-box.pu{background:rgba(139,123,246,.08);border:1px solid rgba(139,123,246,.2)}
+.sig-num{font-size:26px;font-weight:600;min-width:44px;text-align:center;line-height:1}
+.sig-box.hot .sig-num{color:#FF8E5E}
+.sig-box.warm .sig-num{color:#FFB958}
+.sig-box.cool .sig-num{color:#6BB4FF}
+.sig-box.pu .sig-num{color:#A79BF8}
+.sig-info{flex:1}
+.sig-title{font-size:12px;font-weight:500;color:#E6E9EF}
+.sig-sub{font-size:11px;color:#7E8798;margin-top:2px;line-height:1.4}
 /* STREAK BOX */
 .sb{background:#141923;border:1px solid #1A202C;border-radius:8px;padding:8px 9px}
 .sb.hot{border-color:rgba(255,107,53,.3);background:linear-gradient(160deg,rgba(255,107,53,.08),transparent)}
@@ -138,8 +152,6 @@ body{font-family:var(--font);background:#0A0D13;color:#E6E9EF;min-height:100vh}
 .vt-banner{background:linear-gradient(135deg,rgba(255,107,53,.12),transparent);border:1px solid rgba(255,107,53,.2);border-radius:10px;padding:11px 13px;display:flex;align-items:center;gap:13px;margin-bottom:12px}
 .vt-n{font-size:34px;font-weight:600;min-width:56px;text-align:center;letter-spacing:-.02em}
 .vt-t{font-size:12px;color:#D4D9E2;line-height:1.5;flex:1}
-.rtm-hdr{display:grid;grid-template-columns:repeat(2,1fr);gap:5px;margin-bottom:5px}
-.rtm-lbl{font-size:9px;color:#6B7488;text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:3px 0}
 </style>
 </head>
 <body>
@@ -196,21 +208,18 @@ function buildDayBar(days){
       '<div class="db-n">'+n+' gare</div></button>';
   }).join('');
 }
-
 function buildLeagueBar(){
   const leagues=[...new Set(ALL.filter(m=>m.date===curDay).map(m=>m.leagueName))];
   document.getElementById('fbar').innerHTML=
     '<button class="fb '+(curLeague==='all'?'on':'')+'" onclick="setL(\'all\')">Tutte</button>'+
     leagues.map(l=>'<button class="fb '+(curLeague===l?'on':'')+'" onclick="setL(\''+l.replace(/'/g,'')+'\')">'+l+'</button>').join('');
 }
-
 function setDay(d){curDay=d;curLeague='all';document.getElementById('ov').classList.remove('on');
   buildDayBar([...new Set(ALL.map(m=>m.date))].sort());buildLeagueBar();renderMatches();}
 function setL(l){curLeague=l;buildLeagueBar();renderMatches();}
-
 function renderMatches(){
   const filtered=ALL.filter(m=>m.date===curDay&&(curLeague==='all'||m.leagueName===curLeague));
-  if(!filtered.length){document.getElementById('ml').innerHTML='<div class="state">Nessuna partita per questo giorno.</div>';return;}
+  if(!filtered.length){document.getElementById('ml').innerHTML='<div class="state">Nessuna partita.</div>';return;}
   const byL={};filtered.forEach(m=>{(byL[m.leagueName]=byL[m.leagueName]||[]).push(m);});
   let html='';
   for(const[lg,ms]of Object.entries(byL)){
@@ -219,10 +228,10 @@ function renderMatches(){
       const scored=m.homeScore!==null&&m.awayScore!==null;
       const sh=scored?'<span class="mc-sc">'+m.homeScore+'</span>':'';
       const sa=scored?'<span class="mc-sc">'+m.awayScore+'</span>':'';
-      const st=m.status==='finished'?'FT':m.status==='live'?'🔴':'';
       html+='<div class="mc" onclick="openMatch(\''+m.id+'\')">' +
         '<div class="mc-strip"></div><div class="mc-in"><div class="mc-top">' +
-        '<div class="mc-time"><div class="mc-time-h">'+m.time.slice(0,5)+'</div><div class="mc-time-s">'+st+'</div></div>' +
+        '<div class="mc-time"><div class="mc-time-h">'+m.time.slice(0,5)+'</div>' +
+        '<div class="mc-time-s">'+(m.status==='finished'?'FT':m.status==='live'?'🔴':'')+'</div></div>' +
         '<div class="mc-tms"><div class="mc-row"><span class="mc-nm">'+m.homeName+'</span>'+sh+'</div>' +
         '<div class="mc-row"><span class="mc-nm">'+m.awayName+'</span>'+sa+'</div></div>' +
         '</div></div></div>';
@@ -239,7 +248,7 @@ async function openMatch(id){
     '<div class="det-h"><div><div class="det-t">'+m.homeName+' <span style="color:#6B7488;font-weight:400">vs</span> '+m.awayName+'</div>' +
     '<div class="det-m">'+m.leagueName+' · '+m.date+' · ore '+m.time+'</div></div>' +
     '<button class="btn" onclick="closeDet()">✕ chiudi</button></div>' +
-    '<div class="det-b"><div class="li"><div class="sm"></div>Caricamento statistiche (xG, corner, tiri…)</div></div>';
+    '<div class="det-b"><div class="li"><div class="sm"></div>Caricamento statistiche complete…</div></div>';
   document.getElementById('ov').scrollIntoView({behavior:'smooth'});
   try{
     const[hR,aR,h2R]=await Promise.all([
@@ -264,7 +273,7 @@ function fFx(fx,lv,compId,isHome){
 }
 function wFx(fx){const n=cw==='10'?10:cw==='20'?20:cw==='50'?50:9999;return fx.slice(0,n);}
 function av(arr,sel){const v=(arr||[]).map(sel).filter(x=>x!=null&&!isNaN(x));return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}
-function avN(v){return v!=null?v.toFixed(1):'—'}
+function avN(v,dec){return v!=null?v.toFixed(dec??1):'—'}
 function sk(fx,c){let n=0;for(const f of fx){if(c(f))n++;else break;}return n;}
 function par(fx){
   if(!fx.length)return{t:'-',n:0};
@@ -281,101 +290,154 @@ function over(fx,kFn){
   fx.forEach((f,i)=>{const k=kFn(f);if(!k||k.includes('null'))return;if(!(k in seen))seen[k]=i;freq[k]=(freq[k]||0)+1;});
   return Object.keys(seen).map(k=>({s:k,n:seen[k],f:freq[k]})).sort((a,b)=>b.n-a.n).slice(0,4);
 }
+
 function stats(fxAll,compId,isHome){
   const fx=wFx(fFx(fxAll,clv,compId,isHome));
   const fx1=fx.filter(f=>f.hgf!=null);
   const fxXG=fx.filter(f=>f.xg!=null);
+  const fxC=fx.filter(f=>f.corners!=null);
+  const fxS=fx.filter(f=>f.shots!=null);
+  const fxBC=fx.filter(f=>f.bigChances!=null);
+  const fxSv=fx.filter(f=>f.saves!=null);
   return{
-    n:fx.length,
-    gf:av(fx,f=>f.gf),ga:av(fx,f=>f.ga),g1h:av(fx1,f=>f.hgf),tot:av(fx,f=>(f.gf??0)+(f.ga??0)),
-    has1H:fx1.length>0,hasXG:fxXG.length>0,
-    // somma xG ultime N con xg disponibile
+    n:fx.length, has1H:fx1.length>0, hasXG:fxXG.length>0,
+    // Gol
+    gf:av(fx,f=>f.gf), ga:av(fx,f=>f.ga), g1h:av(fx1,f=>f.hgf), tot:av(fx,f=>(f.gf??0)+(f.ga??0)),
+    // xG
+    xgN:fxXG.length,
+    xgArr:fxXG.slice(0,3).map(f=>f.xg),
     xgSum:fxXG.slice(0,3).reduce((s,f)=>s+(f.xg??0),0),
     xgGoals:fxXG.slice(0,3).reduce((s,f)=>s+(f.gf??0),0),
-    xgArr:fxXG.slice(0,3).map(f=>f.xg),
-    xgAvg:av(fxXG,f=>f.xg),
-    xg1hAvg:av(fxXG,f=>f.xg1h),
-    npxgAvg:av(fxXG,f=>f.npxg),
-    shotsAvg:av(fxXG,f=>f.shots),
-    shots1hAvg:av(fxXG,f=>f.shots1h),
-    shotsOTAvg:av(fxXG,f=>f.shotsOT),
-    shotsOT1hAvg:av(fxXG,f=>f.shotsOT1h),
-    cornersAvg:av(fxXG,f=>f.corners),
-    corners1hAvg:av(fxXG,f=>f.corners1h),
+    xgAvg:av(fxXG,f=>f.xg), xg1hAvg:av(fxXG,f=>f.xg1h), npxgAvg:av(fxXG,f=>f.npxg),
+    // Tiri
+    shotsAvg:av(fxS,f=>f.shots), shots1hAvg:av(fxS,f=>f.shots1h),
+    shotsOTAvg:av(fxS,f=>f.shotsOT), shotsOT1hAvg:av(fxS,f=>f.shotsOT1h),
+    // Corner
+    cornersAvg:av(fxC,f=>f.corners), corners1hAvg:av(fxC,f=>f.corners1h),
+    cornersRecent:av(fxC.slice(0,4),f=>f.corners),
+    cornersLow:sk(fxC,f=>f.corners<(av(fxC,f=>f.corners)||5)),
+    // Big Chances
+    bcAvg:av(fxBC,f=>f.bigChances), bc1hAvg:av(fxBC,f=>f.bigChances1h),
+    bcMissedAvg:av(fxBC,f=>f.bigChancesMissed),
+    bcN:fxBC.length,
+    // Parate portiere avversario (= pericolosità offensiva)
+    savesAvg:av(fxSv,f=>f.saves), saves1hAvg:av(fxSv,f=>f.saves1h),
+    gpAvg:av(fx.filter(f=>f.goalsPrevented!=null),f=>f.goalsPrevented),
+    // Varie
     possAvg:av(fxXG,f=>f.poss),
-    // corner recenti vs media (per ritorno alla media)
-    cornersRecent:av(fx.slice(0,4).filter(f=>f.corners!=null),f=>f.corners),
+    foulAvg:av(fx.filter(f=>f.fouls!=null),f=>f.fouls),
+    offAvg:av(fx.filter(f=>f.offsides!=null),f=>f.offsides),
+    crossAvg:av(fx.filter(f=>f.crosses!=null),f=>f.crosses),
+    // Streak
     g:{ng:sk(fx,f=>(f.gf??0)===0),nv:sk(fx,f=>(f.gf??0)<=(f.ga??0)),nd:sk(fx,f=>(f.gf??0)!==(f.ga??0)),nl:sk(fx,f=>(f.gf??0)>=(f.ga??0)),cs:sk(fx,f=>(f.ga??0)===0),pd:par(fx)},
     g1:{ng:sk(fx1,f=>(f.hgf??0)===0),nv:sk(fx1,f=>(f.hgf??0)<=(f.hga??0)),nl:sk(fx1,f=>(f.hgf??0)>=(f.hga??0)),cs:sk(fx1,f=>(f.hga??0)===0)},
-    oe:over(fx,f=>f.gf+'-'+f.ga),o1:over(fx1,f=>f.hgf+'-'+f.hga),
+    oe:over(fx,f=>f.gf+'-'+f.ga), o1:over(fx1,f=>f.hgf+'-'+f.hga),
   };
 }
 
 function sbC(v,l,cls,sub){return '<div class="sb '+(cls||'')+'"><div class="sb-l">'+l+'</div><div class="sb-v">'+v+'</div><div class="sb-s">'+(sub||'gare di fila')+'</div></div>';}
 function avC(v,l,cls,sub){return '<div class="av '+(cls||'')+'"><div class="av-v">'+avN(v)+'</div><div class="av-l">'+l+'</div>'+(sub?'<div class="av-s">'+sub+'</div>':'')+'</div>';}
+function sigBox(num,title,sub,cls){return '<div class="sig-box '+(cls||'cool')+'"><div class="sig-num">'+avN(num)+'</div><div class="sig-info"><div class="sig-title">'+title+'</div><div class="sig-sub">'+sub+'</div></div></div>';}
 
 function teamBlock(s,name,isHome,fx){
-  const lv={all:'Tutte le comp.',casa:'Casa/tras.',comp:'Comp.',casaComp:'Casa+comp.'}[clv];
-  const w=cw==='all'?'Tutte':cw==='10'?'Ult. 10':cw==='20'?'Ult. 20':'Ult. 50';
+  const lv={all:'Tutte',casa:'Casa/tras.',comp:'Comp.',casaComp:'Casa+comp.'}[clv];
+  const w=cw==='all'?'Tutte':cw==='10'?'Ult.10':cw==='20'?'Ult.20':'Ult.50';
+
   // Segnale xG
-  let xgSig='',xgSigCls='flat';
-  if(s.hasXG&&s.xgGoals===0&&s.xgSum>=3.5){xgSig='⚡ Sblocco atteso';xgSigCls='hot';}
-  else if(s.hasXG&&s.xgGoals<=1&&s.xgSum>=2.5){xgSig='Possibile sblocco';xgSigCls='warm';}
-  else if(s.hasXG&&s.xgGoals===0&&s.xgSum<2){xgSig='Digiuno meritato';xgSigCls='cool';}
-  else if(s.hasXG){xgSig='In linea';xgSigCls='flat';}
+  let xgSig='In linea',xgSigCls='flat';
+  if(s.hasXG){
+    if(s.xgGoals===0&&s.xgSum>=3.5){xgSig='⚡ Sblocco quasi certo';xgSigCls='hot';}
+    else if(s.xgGoals<=1&&s.xgSum>=2.5){xgSig='Sblocco probabile';xgSigCls='warm';}
+    else if(s.xgGoals===0&&s.xgSum<2){xgSig='Digiuno meritato';xgSigCls='cool';}
+  }
+
   // Corner ritorno alla media
-  let cRet='';
+  let cRetHtml='';
   if(s.cornersAvg!=null&&s.cornersRecent!=null){
     const gap=s.cornersAvg-s.cornersRecent;
-    if(gap>=2.5)cRet='⚡ Ritorno corner probabile (gap '+gap.toFixed(1)+')';
-    else if(gap>=1.5)cRet='Gap corner: −'+gap.toFixed(1)+' vs media';
+    if(gap>=2.5)cRetHtml='<div class="nd" style="color:#A79BF8;background:rgba(139,123,246,.08);border:1px solid rgba(139,123,246,.2);border-radius:7px;padding:6px 9px;margin-top:5px">⚡ Ritorno corner probabile — media '+avN(s.cornersAvg)+' ma ultime 4 solo '+avN(s.cornersRecent)+' (gap '+avN(gap)+')</div>';
+    else if(gap>=1.5)cRetHtml='<div class="nd">Gap corner: −'+avN(gap)+' rispetto alla media ('+avN(s.cornersAvg)+')</div>';
   }
+
   return '<div class="tsec">' +
     '<div class="tsn">'+(isHome?'<span class="hp">Casa</span>':'<span class="ap">Trasferta</span>')+name+
     ' <span style="font-size:10px;color:#525B6F">('+s.n+' gare · '+lv+' · '+w+')</span>' +
     '<div style="margin-left:auto;display:flex;gap:2px">'+dots(fx)+'</div></div>' +
 
-    '<div class="sct">📊 Medie gol<div class="sl"></div></div>' +
-    '<div class="g4">'+avC(s.gf,'Gol fatti','hi')+avC(s.ga,'Gol subiti','')+avC(s.g1h,'Gol 1°T',s.has1H?'':'')+(s.tot!=null?avC(s.tot,'Tot. gara',''):'')+'</div>' +
+    // GOL
+    '<div class="sct">⚽ Medie gol<div class="sl"></div></div>' +
+    '<div class="g4">'+avC(s.gf,'Gol fatti','hi')+avC(s.ga,'Gol subiti','')+avC(s.g1h,s.has1H?'Gol 1°T':'Gol 1°T','')+'<div class="av"><div class="av-v">'+avN(s.tot)+'</div><div class="av-l">Tot. gara</div></div></div>' +
 
+    // XG
     (s.hasXG ?
     '<div class="sct">🎯 Expected Goals (xG)<div class="sl"></div></div>' +
     '<div class="xgbox"><div class="xgbox-top">' +
-      '<div><div class="xg-big">'+avN(s.xgSum)+'</div><div style="font-size:9px;color:#6B7488;margin-top:3px">somma xG ultime '+Math.min(3,s.xgArr.length)+' gare</div></div>' +
-      '<div class="xg-info"><div class="xg-label">xG per partita</div>' +
-        '<div class="xg-sum">Singole: '+s.xgArr.map(v=>v!=null?v.toFixed(2):'—').join(' · ')+'</div>' +
-        '<span class="xg-sig '+(s.hasXG?xgSigCls:'flat')+'">'+xgSig+'</span></div>' +
+      '<div><div class="xg-big">'+avN(s.xgSum)+'</div><div style="font-size:9px;color:#6B7488;margin-top:3px">somma xG ult.'+Math.min(3,s.xgArr.length)+' gare</div></div>' +
+      '<div class="xg-info"><div class="xg-label">Singole</div>' +
+        '<div class="xg-sum">'+s.xgArr.map(v=>avN(v,2)).join(' · ')+'</div>' +
+        '<span class="xg-sig '+xgSigCls+'">'+xgSig+'</span></div>' +
     '</div>' +
-    '<div class="xg-grid">'+avC(s.xgAvg,'xG medio/gara','bl')+avC(s.xg1hAvg,'xG medio 1°T','bl')+avC(s.npxgAvg,'npxG medio','bl')+'</div></div>'
-    : '<div class="nd">⚠️ xG non disponibile per questa competizione/periodo.</div>') +
+    '<div class="g3">'+avC(s.xgAvg,'xG avg/gara','bl')+avC(s.xg1hAvg,'xG avg 1°T','bl')+avC(s.npxgAvg,'npxG avg','bl')+'</div></div>'
+    : '<div class="nd">⚠️ xG non disponibile per questo periodo/competizione.</div>') +
 
+    // BIG CHANCES
+    (s.bcN>0 ?
+    '<div class="sct">💥 Big Chances<div class="sl"></div></div>' +
+    '<div class="g3">'+
+      sigBox(s.bcAvg,'Big chances create/gara','occasioni nitide medie','cool')+
+      sigBox(s.bc1hAvg,'Big chances 1°T','occasioni nitide primo tempo','cool')+
+      sigBox(s.bcMissedAvg,'Big chances mancate','occasioni sprecate avg','warm')+
+    '</div>'
+    : '') +
+
+    // PARATE (= quanto la difesa fa lavorare il portiere avversario)
+    (s.savesAvg!=null ?
+    '<div class="sct">🧤 Parate subìte (pericolosità offensiva)<div class="sl"></div></div>' +
+    '<div class="g3">'+
+      avC(s.savesAvg,'Parate avv./gara','ye','quante parate fa il portiere avversario')+
+      avC(s.saves1hAvg,'Parate avv. 1°T','ye','')+
+      avC(s.gpAvg,'Gol preventi avv.','ye','gol impediti dal portiere avversario')+
+    '</div>'
+    : '') +
+
+    // TIRI
     (s.shotsAvg!=null ?
     '<div class="sct">🏹 Tiri<div class="sl"></div></div>' +
     '<div class="g4">'+avC(s.shotsAvg,'Tiri tot.','gr')+avC(s.shots1hAvg,'Tiri 1°T','gr')+avC(s.shotsOTAvg,'In porta','gr')+avC(s.shotsOT1hAvg,'In porta 1°T','gr')+'</div>'
     : '') +
 
+    // CORNER
     (s.cornersAvg!=null ?
     '<div class="sct">🚩 Corner<div class="sl"></div></div>' +
-    '<div class="g3">'+avC(s.cornersAvg,'Corner medi','pu')+avC(s.corners1hAvg,'Corner 1°T','pu')+avC(s.cornersRecent,'Corner ult.4','pu','media recente')+'</div>' +
-    (cRet?'<div class="nd" style="color:#A79BF8;background:rgba(139,123,246,.08);border-color:rgba(139,123,246,.2)">'+cRet+'</div>':'')
+    '<div class="g4">'+avC(s.cornersAvg,'Corner avg','pu')+avC(s.corners1hAvg,'Corner 1°T','pu')+avC(s.cornersRecent,'Corner ult.4','pu','media recente')+'<div class="av"><div class="av-v" style="font-size:13px;margin-top:4px;color:'+(s.cornersAvg&&s.cornersRecent&&(s.cornersAvg-s.cornersRecent)>=1.5?'#A79BF8':'#525B6F')+'">'+(s.cornersAvg&&s.cornersRecent?(s.cornersAvg-s.cornersRecent>=0?'−'+avN(s.cornersAvg-s.cornersRecent):'+'+avN(s.cornersRecent-s.cornersAvg)):'—')+'</div><div class="av-l">Gap</div></div></div>'+
+    cRetHtml
     : '') +
 
-    (s.possAvg!=null?
-    '<div class="sct">⚽ Possesso medio<div class="sl"></div></div>' +
-    '<div class="g2">'+avC(s.possAvg,'Possesso %','hi','media gare con xG')+'</div>'
+    // POSSESSO + ALTRO
+    (s.possAvg!=null||s.offAvg!=null ?
+    '<div class="sct">📊 Stile di gioco<div class="sl"></div></div>' +
+    '<div class="g4">'+
+      (s.possAvg!=null?avC(s.possAvg,'Possesso %','hi',''):'') +
+      (s.offAvg!=null?avC(s.offAvg,'Fuorigioco avg','',''):'')+
+      (s.foulAvg!=null?avC(s.foulAvg,'Falli avg','',''):'')+
+      (s.crossAvg!=null?avC(s.crossAvg,'Cross acc. avg','',''):'') +
+    '</div>'
     : '') +
 
+    // STRISCE
     '<div class="sct">📈 Strisce generali<div class="sl"></div></div>' +
     '<div class="g3">'+sbC(s.g.ng,'Non segna',s.g.ng>=3?'warm':'')+sbC(s.g.nv,'Non vince',s.g.nv>=4?'warm':'')+sbC(s.g.nd,'Non pareggia',s.g.nd>=5?'warm':'')+'</div>' +
     '<div class="g3" style="margin-top:5px">'+sbC(s.g.nl,'Imbattuta',s.g.nl>=5?'safe':'')+sbC(s.g.cs,'Porta inviolata',s.g.cs>=3?'cool':'')+
     '<div class="sb"><div class="sb-l">Somma gol</div><div class="sb-v" style="font-size:13px;margin-top:5px">'+s.g.pd.t+' '+s.g.pd.n+'</div><div class="sb-s">di fila</div></div></div>' +
 
+    // PRIMO TEMPO
     (s.has1H ?
     '<div class="sct">⏱ Primo tempo<div class="sl"></div></div>' +
-    '<div class="g3" style="margin-top:0">'+sbC(s.g1.ng,'Non segna 1°T',s.g1.ng>=3?'warm':'')+sbC(s.g1.nv,'Non vince 1°T',s.g1.nv>=5?'hot':'')+sbC(s.g1.nl,'Imbattuta 1°T',s.g1.nl>=6?'hot':'')+'</div>' +
+    '<div class="g3">'+sbC(s.g1.ng,'Non segna 1°T',s.g1.ng>=3?'warm':'')+sbC(s.g1.nv,'Non vince 1°T',s.g1.nv>=5?'hot':'')+sbC(s.g1.nl,'Imbattuta 1°T',s.g1.nl>=6?'hot':'')+'</div>' +
     '<div class="g3" style="margin-top:5px">'+sbC(s.g1.cs,'Inviolata 1°T',s.g1.cs>=4?'cool':'')+'</div>'
     : '<div class="nd">⚠️ Dati primo tempo non disponibili per questa competizione.</div>') +
 
+    // RITARDATARI
     '<div class="sct">🎯 Ritardatari · finale<div class="sl"></div></div>' +
     (s.oe.length?s.oe.map(o=>'<div class="er"><span class="er-s'+(o.n>=8?' er-rare':'')+'">'+o.s+'</span><span class="er-m">manca da '+o.n+' gare (uscito '+o.f+'×)</span></div>').join(''):'<div class="er"><span class="er-m">Dati insufficienti</span></div>') +
     (s.has1H?'<div class="sct">🎯 Ritardatari · 1° tempo<div class="sl"></div></div>'+(s.o1.length?s.o1.map(o=>'<div class="er"><span class="er-s'+(o.n>=5?' er-rare':'')+'">'+o.s+'</span><span class="er-m">manca da '+o.n+' gare</span></div>').join(''):'<div class="er"><span class="er-m">Dati insufficienti</span></div>'):'') +
@@ -389,24 +451,31 @@ function renderDet(){
   const h2h=m._h2h||[];
   const h2hND=sk(h2h,x=>x.hg!==x.ag);
   const h2hNB=sk(h2h,x=>x.hg===0||x.ag===0);
+
+  // Vantaggio
   let vt=4;
   if(H.g1.nl>=6&&A.g1.nv>=6)vt+=2.5;
-  if(A.g.ng>=3&&A.xgSum>2)vt+=1.5;
+  if(A.g.ng>=2&&A.xgSum>2.5)vt+=1.5;
   else if(A.g.ng>=3)vt+=0.8;
-  if(H.g.ng>=3&&H.xgSum>2)vt+=1;
-  else if(H.g.ng>=3)vt+=0.5;
+  if(H.g.ng>=2&&H.xgSum>2.5)vt+=1;
   if(H.g.nd>=5||A.g.nd>=5)vt+=0.8;
-  if((H.gf||0)>=2)vt+=0.5;
+  if((H.gf||0)>=2)vt+=0.4;
   if(h2hND>=5)vt+=0.5;
+  if(A.bcAvg!=null&&A.bcMissedAvg!=null&&A.bcMissedAvg>A.bcAvg*0.6)vt+=0.5;
   vt=Math.min(9.9,Math.round(vt*10)/10);
   const vc=vt>=8?'#FF6B35':vt>=7?'#FFA630':'#3B9EFF';
+
+  // Scommesse
   const bets=[];
   if(H.g1.nl>=6&&A.g1.nv>=6)bets.push({l:'1X primo tempo',w:m.homeName+' imbattuta 1°T da '+H.g1.nl+' · '+m.awayName+' senza W 1°T da '+A.g1.nv,c:'alta'});
-  if(A.g.ng>=2&&A.xgSum>2.5)bets.push({l:'Segna '+m.homeName+' / NG '+m.awayName,w:m.awayName+' a secco da '+A.g.ng+' gare con xG accumulato '+A.xgSum.toFixed(1)+': sblocco atteso',c:'alta'});
-  if(H.g.ng>=2&&H.xgSum>2.5)bets.push({l:'Segna '+m.awayName+' / NG '+m.homeName,w:m.homeName+' a secco da '+H.g.ng+' gare con xG accumulato '+H.xgSum.toFixed(1),c:'alta'});
+  if(A.g.ng>=2&&A.xgSum>2.5)bets.push({l:'⚡ Segna '+m.homeName+' / NG '+m.awayName,w:m.awayName+' a secco da '+A.g.ng+' gare con xG accumulato '+avN(A.xgSum)+' — sblocco quasi certo',c:'alta'});
+  if(H.g.ng>=2&&H.xgSum>2.5)bets.push({l:'⚡ Segna '+m.awayName+' / NG '+m.homeName,w:m.homeName+' a secco da '+H.g.ng+' gare con xG accumulato '+avN(H.xgSum),c:'alta'});
+  if(A.cornersAvg!=null&&A.cornersRecent!=null&&(A.cornersAvg-A.cornersRecent)>=2.5)bets.push({l:'Over corner '+m.awayName,w:'Media '+avN(A.cornersAvg)+' corner ma ultime 4 solo '+avN(A.cornersRecent)+' — ritorno alla media atteso',c:'alta'});
+  if(H.cornersAvg!=null&&H.cornersRecent!=null&&(H.cornersAvg-H.cornersRecent)>=2.5)bets.push({l:'Over corner '+m.homeName,w:'Media '+avN(H.cornersAvg)+' corner ma ultime 4 solo '+avN(H.cornersRecent)+' — ritorno alla media atteso',c:'alta'});
   if(h2hND>=5)bets.push({l:'No pareggio',w:'Senza X da '+h2hND+' scontri diretti',c:'media'});
-  if((H.gf||0)>=2)bets.push({l:m.homeName+' Over 1.5',w:'Media '+avN(H.gf)+' gol/gara nel filtro selezionato',c:'media'});
-  if(!bets.length)bets.push({l:'Nessuna giocata ad alto vantaggio',w:'I segnali su questa partita sono deboli — meglio passare',c:'media'});
+  if((H.gf||0)>=2)bets.push({l:m.homeName+' Over 1.5',w:'Media '+avN(H.gf)+' gol/gara',c:'media'});
+  if(!bets.length)bets.push({l:'Nessuna giocata ad alto vantaggio',w:'I segnali sono deboli su questa partita',c:'media'});
+
   const scored=m.homeScore!==null;
   document.getElementById('det').innerHTML=
     '<div class="det-h"><div>'+
@@ -415,9 +484,9 @@ function renderDet(){
     '</div><button class="btn" onclick="closeDet()">✕ chiudi</button></div>'+
     '<div class="det-b">'+
       '<div class="vt-banner"><div class="vt-n" style="color:'+vc+'">'+vt+'<span style="font-size:13px;color:#6B7488">/10</span></div>'+
-      '<div class="vt-t">Vantaggio statistico basato su streak, xG accumulato, corner, tiri e scontri diretti.</div></div>'+
-      '<div class="flt"><div class="flt-l">⏳ Finestra temporale</div><div class="flt-p">'+
-        ['10','20','50','all'].map(w=>'<button class="fp win '+(cw===w?'on':'')+'" onclick="sCw(\''+w+'\')">'+(w==='all'?'Tutte':'Ult. '+w)+'</button>').join('')+
+      '<div class="vt-t">Vantaggio statistico su streak, xG accumulato, big chances, corner e H2H.</div></div>'+
+      '<div class="flt"><div class="flt-l">⏳ Finestra</div><div class="flt-p">'+
+        ['10','20','50','all'].map(w=>'<button class="fp win '+(cw===w?'on':'')+'" onclick="sCw(\''+w+'\')">'+(w==='all'?'Tutte':'Ult.'+w)+'</button>').join('')+
       '</div><div class="flt-l">🏟 Campo e competizione</div><div class="flt-p">'+
         '<button class="fp '+(clv==='all'?'on':'')+'" onclick="sClv(\'all\')">Tutte le comp.</button>'+
         '<button class="fp '+(clv==='casa'?'on':'')+'" onclick="sClv(\'casa\')">Casa/trasferta</button>'+

@@ -1,5 +1,3 @@
-// /api/team?id=tm_xxx
-// Scarica le ultime 20 partite finite + stats dettagliate (xG, corner, tiri) per le ultime 10 con xg_available
 const API_BASE = "https://api.thestatsapi.com/api/football";
 const cache = {};
 const CACHE_TTL = 4 * 60 * 60 * 1000;
@@ -29,40 +27,59 @@ function teamView(match, teamId) {
     matchId: match.id,
     d: (match.utc_date || "").slice(0, 10),
     compId: match.competition_id || "",
-    compName: match.competition?.name || "",
     h: isHome ? 1 : 0,
     gf: isHome ? hg : ag,
     ga: isHome ? ag : hg,
-    hgf: hhg,
-    hga: hag,
+    hgf: hhg, hga: hag,
     oppId: isHome ? match.away_team?.id : match.home_team?.id,
     oppName: isHome ? match.away_team?.name : match.home_team?.name,
     xgAvail: match.xg_available || false,
-    // stats dettagliate (riempite dopo)
+    // stats dettagliate
     xg: null, xg1h: null, npxg: null,
     shots: null, shots1h: null,
     shotsOT: null, shotsOT1h: null,
     corners: null, corners1h: null,
     poss: null, poss1h: null,
+    bigChances: null, bigChances1h: null,
+    bigChancesMissed: null,
+    saves: null, saves1h: null,
+    fouls: null, fouls1h: null,
+    offsides: null,
+    crosses: null,
+    goalsPrevented: null,
   };
 }
 
 function extractStats(statsData, isHome) {
   const side = isHome ? "home" : "away";
+  const opp = isHome ? "away" : "home";
   const ov = statsData?.overview || {};
   const sh = statsData?.shots || {};
+  const at = statsData?.attack || {};
+  const gk = statsData?.goalkeeping || {};
+  const ps = statsData?.passes || {};
   return {
-    xg:       ov.expected_goals?.all?.[side] ?? null,
-    xg1h:     ov.expected_goals?.first_half?.[side] ?? null,
-    npxg:     statsData?.np_expected_goals?.all?.[side] ?? null,
-    shots:    ov.total_shots?.all?.[side] ?? sh.total_shots?.all?.[side] ?? null,
-    shots1h:  ov.total_shots?.first_half?.[side] ?? sh.total_shots?.first_half?.[side] ?? null,
-    shotsOT:  ov.shots_on_target?.all?.[side] ?? sh.shots_on_target?.all?.[side] ?? null,
-    shotsOT1h: ov.shots_on_target?.first_half?.[side] ?? sh.shots_on_target?.first_half?.[side] ?? null,
-    corners:  ov.corner_kicks?.all?.[side] ?? null,
-    corners1h: ov.corner_kicks?.first_half?.[side] ?? null,
-    poss:     ov.ball_possession?.all?.[side] ?? null,
-    poss1h:   ov.ball_possession?.first_half?.[side] ?? null,
+    xg:           ov.expected_goals?.all?.[side] ?? null,
+    xg1h:         ov.expected_goals?.first_half?.[side] ?? null,
+    npxg:         statsData?.np_expected_goals?.all?.[side] ?? null,
+    shots:        ov.total_shots?.all?.[side] ?? sh.total_shots?.all?.[side] ?? null,
+    shots1h:      ov.total_shots?.first_half?.[side] ?? sh.total_shots?.first_half?.[side] ?? null,
+    shotsOT:      ov.shots_on_target?.all?.[side] ?? sh.shots_on_target?.all?.[side] ?? null,
+    shotsOT1h:    ov.shots_on_target?.first_half?.[side] ?? sh.shots_on_target?.first_half?.[side] ?? null,
+    corners:      ov.corner_kicks?.all?.[side] ?? null,
+    corners1h:    ov.corner_kicks?.first_half?.[side] ?? null,
+    poss:         ov.ball_possession?.all?.[side] ?? null,
+    poss1h:       ov.ball_possession?.first_half?.[side] ?? null,
+    bigChances:   ov.big_chances?.all?.[side] ?? null,
+    bigChances1h: ov.big_chances?.first_half?.[side] ?? null,
+    bigChancesMissed: at.big_chances_missed?.all?.[side] ?? null,
+    saves:        gk.saves?.all?.[opp] ?? ov.goalkeeper_saves?.all?.[opp] ?? null,  // parate = quelle del portiere avversario
+    saves1h:      gk.saves?.first_half?.[opp] ?? ov.goalkeeper_saves?.first_half?.[opp] ?? null,
+    goalsPrevented: gk.goals_prevented?.all?.[opp] ?? null,
+    fouls:        ov.fouls?.all?.[side] ?? null,
+    fouls1h:      ov.fouls?.first_half?.[side] ?? null,
+    offsides:     at.offsides?.all?.[side] ?? null,
+    crosses:      ps.accurate_crosses?.all?.[side] ?? null,
   };
 }
 
@@ -70,24 +87,16 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   const key = process.env.STATS_API_KEY;
   if (!key) { res.status(500).json({ error: "Manca STATS_API_KEY" }); return; }
-
   const teamId = req.query?.id;
   if (!teamId) { res.status(400).json({ error: "Manca ?id=tm_xxx" }); return; }
-
   const now = Date.now();
   if (cache[teamId] && now - cache[teamId].at < CACHE_TTL) {
     res.status(200).json({ ...cache[teamId].data, cached: true }); return;
   }
-
   try {
-    // 1) Ultime 20 partite finite
-    const r = await apiFetch("/matches", key, {
-      team_id: teamId, status: "finished", per_page: 20
-    });
+    const r = await apiFetch("/matches", key, { team_id: teamId, status: "finished", per_page: 20 });
     const matches = r.data || [];
     const fixtures = matches.map(m => teamView(m, teamId));
-
-    // 2) Stats dettagliate per le prime 10 con xg_available (max 10 chiamate)
     const withXG = fixtures.filter(f => f.xgAvail).slice(0, 10);
     for (const f of withXG) {
       try {
@@ -95,11 +104,8 @@ export default async function handler(req, res) {
         const sr = await apiFetch(`/matches/${f.matchId}/stats`, key);
         const s = extractStats(sr.data, f.h === 1);
         Object.assign(f, s);
-      } catch(e) {
-        // se una stats fallisce, lasciamo i valori null
-      }
+      } catch(e) {}
     }
-
     const data = { teamId, fixtures };
     cache[teamId] = { at: now, data };
     res.status(200).json({ ...data, cached: false });
