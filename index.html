@@ -320,13 +320,15 @@ async function loadAnalysis(force=false){
     for(let i=0; i<Math.min(matches.length,20); i++){
       const m = matches[i];
       // Aggiorna progresso
-      document.querySelector('.state').childNodes[0].textContent='';
-      document.getElementById('prog-bar').style.width=((i+1)/total*100)+'%';
-      document.querySelector('.state').innerHTML=
-        '<div class="spinner"></div>Analisi partita '+(i+1)+'/'+total+': '+m.homeName+' vs '+m.awayName+
-        '<br><div style="font-size:11px;color:#6B7488;margin-top:6px">Caricamento xG, corner, H2H…</div>'+
-        '<div style="background:#1A202C;border-radius:4px;height:4px;margin-top:10px;overflow:hidden">'+
-        '<div style="height:100%;background:#FF6B35;width:'+((i+1)/total*100)+'%;transition:.3s"></div></div>';
+      const pct=Math.round((i+1)/total*100);
+      document.getElementById('analisi-content').innerHTML=
+        '<div class="state"><div class="spinner"></div>' +
+        'Analisi partita '+(i+1)+'/'+total+': <b style="color:#E6E9EF">'+m.homeName+' vs '+m.awayName+'</b>' +
+        '<br><div style="font-size:11px;color:#6B7488;margin-top:6px">Caricamento xG, corner, H2H…</div>' +
+        '<div style="background:#1A202C;border-radius:4px;height:4px;margin-top:12px;overflow:hidden">' +
+        '<div style="height:100%;background:#FF6B35;width:'+pct+'%;transition:.3s"></div></div>' +
+        '<div style="font-size:10px;color:#525B6F;margin-top:6px">'+pct+'% completato</div>' +
+        '</div>';
 
       // Carica squadre sequenzialmente per evitare rate limit
       const delay = ms => new Promise(r => setTimeout(r, ms));
