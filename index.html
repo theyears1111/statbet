@@ -293,17 +293,66 @@ function renderMatches(){
 }
 
 // ── ANALISI ──
+// L'analisi carica i dati dal browser (no timeout serverless)
+// e calcola i segnali lato client
+
 async function loadAnalysis(force=false){
   document.getElementById('analisi-content').innerHTML=
-    '<div class="state"><div class="spinner"></div>Analisi in corso… (2-3 minuti)<br><br>' +
-    '<div style="font-size:11px;color:#6B7488">Sto caricando xG, corner, tiri, big chances e H2H<br>per tutte le squadre della settimana…</div></div>';
+    '<div class="state"><div class="spinner"></div>Caricamento lista partite…</div>';
   try{
-    const r=await fetch('/api/analyze'+(force?'?refresh=1':''));
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    const j=await r.json();
-    if(j.error)throw new Error(j.error);
-    ANALYSIS=j;
-    document.getElementById('sig-count').textContent=j.signals?.length||0;
+    // 1. Lista partite dalla settimana (veloce, usa /api/matches già caricato)
+    let matches = ALL.length ? ALL : await fetch('/api/matches').then(r=>r.json()).then(j=>j.matches||[]);
+    if(!matches.length) throw new Error('Nessuna partita trovata');
+
+    // Mostra progresso
+    const total = Math.min(matches.length, 20);
+    document.getElementById('analisi-content').innerHTML=
+      '<div class="state"><div class="spinner"></div>' +
+      'Caricamento dati squadre… (0/'+total+')<br>' +
+      '<div style="font-size:11px;color:#6B7488;margin-top:8px">xG, corner, tiri, big chances per ogni squadra</div>' +
+      '<div style="background:#1A202C;border-radius:4px;height:4px;margin-top:14px;overflow:hidden">' +
+      '<div id="prog-bar" style="height:100%;background:#FF6B35;width:0%;transition:.3s"></div></div></div>';
+
+    const allSignals = [];
+    const matchDataMap = {};
+    const teamCache = {};
+
+    for(let i=0; i<Math.min(matches.length,20); i++){
+      const m = matches[i];
+      // Aggiorna progresso
+      document.querySelector('.state').childNodes[0].textContent='';
+      document.getElementById('prog-bar').style.width=((i+1)/total*100)+'%';
+      document.querySelector('.state').innerHTML=
+        '<div class="spinner"></div>Analisi partita '+(i+1)+'/'+total+': '+m.homeName+' vs '+m.awayName+
+        '<br><div style="font-size:11px;color:#6B7488;margin-top:6px">Caricamento xG, corner, H2H…</div>'+
+        '<div style="background:#1A202C;border-radius:4px;height:4px;margin-top:10px;overflow:hidden">'+
+        '<div style="height:100%;background:#FF6B35;width:'+((i+1)/total*100)+'%;transition:.3s"></div></div>';
+
+      // Carica squadre e H2H in parallelo
+      if(!teamCache[m.homeId]){
+        try{ const r=await fetch('/api/team?id='+m.homeId).then(x=>x.json()); teamCache[m.homeId]=r.fixtures||[]; }catch(e){ teamCache[m.homeId]=[]; }
+      }
+      if(!teamCache[m.awayId]){
+        try{ const r=await fetch('/api/team?id='+m.awayId).then(x=>x.json()); teamCache[m.awayId]=r.fixtures||[]; }catch(e){ teamCache[m.awayId]=[]; }
+      }
+      let h2h=[];
+      try{ const r=await fetch('/api/h2h?home='+m.homeId+'&away='+m.awayId+'&per_page=20').then(x=>x.json()); h2h=r.h2h||[]; }catch(e){}
+
+      const homeFx = teamCache[m.homeId]||[];
+      const awayFx = teamCache[m.awayId]||[];
+      matchDataMap[m.id] = {homeFx, awayFx, h2h};
+
+      // Calcola segnali
+      const sigs = computeSignals(m, homeFx, awayFx, h2h);
+      allSignals.push(...sigs);
+    }
+
+    allSignals.sort((a,b)=>b.conf-a.conf);
+    const byType={};
+    for(const s of allSignals){ if(!byType[s.type])byType[s.type]=[]; byType[s.type].push(s); }
+
+    ANALYSIS={signals:allSignals, byType, matchDataMap};
+    document.getElementById('sig-count').textContent=allSignals.length;
     renderAnalysis();
   }catch(e){
     document.getElementById('analisi-content').innerHTML=
@@ -311,6 +360,236 @@ async function loadAnalysis(force=false){
       '<button class="analyze-btn" style="margin-top:12px" onclick="loadAnalysis()">🔄 Riprova</button>';
   }
 }
+
+function computeSignals(m, homeFx, awayFx, h2h){
+  const signals=[];
+  const compId=m.compId;
+
+  // Tutti i filtri da analizzare
+  const filters=[
+    {key:'all', label:'Tutte le comp.'},
+    {key:'home', label:'Casa/trasferta'},
+    {key:'comp', label:'Solo '+m.leagueName},
+    {key:'compHome', label:'Casa+comp.'},
+  ];
+
+  for(const filt of filters){
+    const hfx = filtFx(homeFx, filt.key, compId, true);
+    const afx = filtFx(awayFx, filt.key, compId, false);
+    if(!hfx.length && !afx.length) continue;
+
+    // 1. CASA non segna + xG alto
+    const hNG = sk(hfx, f=>(f.gf??0)===0);
+    if(hNG>=2){
+      const fxg=hfx.filter(f=>f.xg!=null);
+      const xgSum=fxg.slice(0,hNG).reduce((s,f)=>s+(f.xg??0),0);
+      const xg1h=fxg.slice(0,hNG).reduce((s,f)=>s+(f.xg1h??0),0);
+      const bc=hfx.slice(0,hNG).reduce((s,f)=>s+(f.bigChances??0),0);
+      const bcM=hfx.slice(0,hNG).reduce((s,f)=>s+(f.bigChancesMissed??0),0);
+      let conf=50;
+      if(xgSum>=4)conf+=25; else if(xgSum>=2.5)conf+=15; else if(xgSum>=1.5)conf+=7;
+      if(bc>=5)conf+=10; if(bcM>=3)conf+=8;
+      conf=Math.min(96,conf);
+      if(conf>=60) signals.push({
+        type:'goal',cat:'⚽ Segna',filter:filt.label,
+        title:m.homeName+' non segna da '+hNG+' gare',
+        detail:'xG accumulato: '+xgSum.toFixed(2)+' · xG 1°T: '+xg1h.toFixed(2)+' · BC create: '+bc+' · BC mancate: '+bcM,
+        bets:['Segna '+m.homeName,'Goal/GG',m.homeName+' Over 0.5'],
+        conf, matchId:m.id, match:m.homeName+' vs '+m.awayName, leagueName:m.leagueName, date:m.date, time:m.time
+      });
+    }
+
+    // 2. TRASFERTA non segna + xG alto
+    const aNG = sk(afx, f=>(f.gf??0)===0);
+    if(aNG>=2){
+      const fxg=afx.filter(f=>f.xg!=null);
+      const xgSum=fxg.slice(0,aNG).reduce((s,f)=>s+(f.xg??0),0);
+      const bc=afx.slice(0,aNG).reduce((s,f)=>s+(f.bigChances??0),0);
+      const bcM=afx.slice(0,aNG).reduce((s,f)=>s+(f.bigChancesMissed??0),0);
+      let conf=50;
+      if(xgSum>=4)conf+=25; else if(xgSum>=2.5)conf+=15; else if(xgSum>=1.5)conf+=7;
+      if(bc>=5)conf+=10; if(bcM>=3)conf+=8;
+      conf=Math.min(96,conf);
+      if(conf>=60) signals.push({
+        type:'goal',cat:'⚽ Segna',filter:filt.label,
+        title:m.awayName+' non segna da '+aNG+' gare',
+        detail:'xG accumulato: '+xgSum.toFixed(2)+' · BC create: '+bc+' · BC mancate: '+bcM,
+        bets:['Segna '+m.awayName,'Goal/GG',m.awayName+' Over 0.5'],
+        conf, matchId:m.id, match:m.homeName+' vs '+m.awayName, leagueName:m.leagueName, date:m.date, time:m.time
+      });
+    }
+
+    // 3. NON SEGNA 1°T
+    const h1h=hfx.filter(f=>f.hgf!=null);
+    const hNG1h=sk(h1h,f=>(f.hgf??0)===0);
+    if(hNG1h>=3){
+      const xg1hSum=hfx.filter(f=>f.xg1h!=null).slice(0,hNG1h).reduce((s,f)=>s+(f.xg1h??0),0);
+      let conf=45+Math.min(25,hNG1h*4);
+      if(xg1hSum>=2)conf+=15;
+      signals.push({
+        type:'goal1h',cat:'⚽ Segna 1°T',filter:filt.label,
+        title:m.homeName+' non segna nel 1°T da '+hNG1h+' gare',
+        detail:'xG 1°T accumulato: '+xg1hSum.toFixed(2),
+        bets:['Segna '+m.homeName+' 1°T','Over 0.5 gol 1°T'],
+        conf:Math.min(88,conf), matchId:m.id, match:m.homeName+' vs '+m.awayName, leagueName:m.leagueName, date:m.date, time:m.time
+      });
+    }
+    const a1h=afx.filter(f=>f.hgf!=null);
+    const aNG1h=sk(a1h,f=>(f.hgf??0)===0);
+    if(aNG1h>=3){
+      const xg1hSum=afx.filter(f=>f.xg1h!=null).slice(0,aNG1h).reduce((s,f)=>s+(f.xg1h??0),0);
+      let conf=45+Math.min(25,aNG1h*4);
+      if(xg1hSum>=2)conf+=15;
+      signals.push({
+        type:'goal1h',cat:'⚽ Segna 1°T',filter:filt.label,
+        title:m.awayName+' non segna nel 1°T da '+aNG1h+' gare',
+        detail:'xG 1°T accumulato: '+xg1hSum.toFixed(2),
+        bets:['Segna '+m.awayName+' 1°T'],
+        conf:Math.min(88,conf), matchId:m.id, match:m.homeName+' vs '+m.awayName, leagueName:m.leagueName, date:m.date, time:m.time
+      });
+    }
+
+    // 4. IMBATTUTA 1°T casa
+    const hNL1h=sk(h1h,f=>(f.hgf??0)>=(f.hga??0));
+    if(hNL1h>=5) signals.push({
+      type:'1hnl',cat:'🛡 Imbattuta 1°T',filter:filt.label,
+      title:m.homeName+' imbattuta nel 1°T da '+hNL1h+' gare',
+      detail:'Non perde la prima frazione da '+hNL1h+' partite consecutive',
+      bets:['1X primo tempo','Pareggio o '+m.homeName+' 1°T'],
+      conf:Math.min(92,55+hNL1h*3), matchId:m.id, match:m.homeName+' vs '+m.awayName, leagueName:m.leagueName, date:m.date, time:m.time
+    });
+
+    // 5. NON VINCE 1°T trasferta
+    const aNW1h=sk(a1h,f=>(f.hgf??0)<=(f.hga??0));
+    if(aNW1h>=5) signals.push({
+      type:'1hnw',cat:'❌ No W 1°T',filter:filt.label,
+      title:m.awayName+' senza vittoria nel 1°T da '+aNW1h+' gare',
+      detail:'La trasferta non vince la prima frazione da '+aNW1h+' partite',
+      bets:['1X primo tempo','No vittoria '+m.awayName+' 1°T'],
+      conf:Math.min(88,50+aNW1h*3), matchId:m.id, match:m.homeName+' vs '+m.awayName, leagueName:m.leagueName, date:m.date, time:m.time
+    });
+
+    // 6. COMBO 1°T (incrocio casa imbattuta + trasferta senza W)
+    if(hNL1h>=5 && aNW1h>=5) signals.push({
+      type:'combo1h',cat:'⚡ Combo 1°T',filter:filt.label,
+      title:'⚡ '+m.homeName+' (NL 1°T: '+hNL1h+') vs '+m.awayName+' (NW 1°T: '+aNW1h+')',
+      detail:'Incrocio perfetto: casa imbattuta 1°T da '+hNL1h+' · trasferta senza W 1°T da '+aNW1h,
+      bets:['1X primo tempo','Pareggio o '+m.homeName+' 1°T'],
+      conf:Math.min(95,62+hNL1h*2+aNW1h*2), matchId:m.id, match:m.homeName+' vs '+m.awayName, leagueName:m.leagueName, date:m.date, time:m.time
+    });
+
+    // 7. CORNER ritorno alla media (casa)
+    const hco=hfx.filter(f=>f.corners!=null);
+    const hcAvg=avS(hco,f=>f.corners), hcRec=avS(hco.slice(0,4),f=>f.corners);
+    if(hcAvg!=null && hcRec!=null && (hcAvg-hcRec)>=2){
+      const gap=hcAvg-hcRec;
+      signals.push({
+        type:'corner',cat:'🚩 Corner',filter:filt.label,
+        title:m.homeName+' — ritorno corner (gap '+gap.toFixed(1)+')',
+        detail:'Media: '+hcAvg.toFixed(1)+' · Ultime 4: '+hcRec.toFixed(1)+' · Atteso recupero',
+        bets:['Over corner '+m.homeName,'Over corner match'],
+        conf:Math.min(86,52+gap*7), matchId:m.id, match:m.homeName+' vs '+m.awayName, leagueName:m.leagueName, date:m.date, time:m.time
+      });
+    }
+    // 8. CORNER ritorno alla media (trasferta)
+    const aco=afx.filter(f=>f.corners!=null);
+    const acAvg=avS(aco,f=>f.corners), acRec=avS(aco.slice(0,4),f=>f.corners);
+    if(acAvg!=null && acRec!=null && (acAvg-acRec)>=2){
+      const gap=acAvg-acRec;
+      signals.push({
+        type:'corner',cat:'🚩 Corner',filter:filt.label,
+        title:m.awayName+' — ritorno corner (gap '+gap.toFixed(1)+')',
+        detail:'Media: '+acAvg.toFixed(1)+' · Ultime 4: '+acRec.toFixed(1),
+        bets:['Over corner '+m.awayName,'Over corner match'],
+        conf:Math.min(86,52+gap*7), matchId:m.id, match:m.homeName+' vs '+m.awayName, leagueName:m.leagueName, date:m.date, time:m.time
+      });
+    }
+
+    // 9. NO PAREGGIO
+    const hND=sk(hfx,f=>(f.gf??0)!==(f.ga??0));
+    const aND=sk(afx,f=>(f.gf??0)!==(f.ga??0));
+    if(hND>=6||aND>=6) signals.push({
+      type:'nodraw',cat:'🔁 No pareggio',filter:filt.label,
+      title:(hND>=aND?m.homeName:m.awayName)+' senza pareggio da '+(hND>=aND?hND:aND)+' gare',
+      detail:'Striscia anomala di risultati secchi in '+filt.label,
+      bets:['No pareggio','Doppia chance 1 o 2'],
+      conf:Math.min(82,42+(Math.max(hND,aND))*4), matchId:m.id, match:m.homeName+' vs '+m.awayName, leagueName:m.leagueName, date:m.date, time:m.time
+    });
+
+    // 10. PORTA INVIOLATA
+    const hCS=sk(hfx,f=>(f.ga??0)===0);
+    const aCS=sk(afx,f=>(f.ga??0)===0);
+    if(hCS>=4) signals.push({
+      type:'cs',cat:'🧤 Porta inviolata',filter:filt.label,
+      title:m.homeName+' porta inviolata da '+hCS+' gare',
+      detail:'Non subisce gol da '+hCS+' partite consecutive',
+      bets:[m.awayName+' NG','Under 0.5 gol subiti '+m.homeName],
+      conf:Math.min(80,42+hCS*8), matchId:m.id, match:m.homeName+' vs '+m.awayName, leagueName:m.leagueName, date:m.date, time:m.time
+    });
+    if(aCS>=4) signals.push({
+      type:'cs',cat:'🧤 Porta inviolata',filter:filt.label,
+      title:m.awayName+' porta inviolata da '+aCS+' gare',
+      detail:'Non subisce gol da '+aCS+' partite consecutive',
+      bets:[m.homeName+' NG','Under 0.5 gol subiti '+m.awayName],
+      conf:Math.min(80,42+aCS*8), matchId:m.id, match:m.homeName+' vs '+m.awayName, leagueName:m.leagueName, date:m.date, time:m.time
+    });
+
+    // 11. TIRI ritorno alla media
+    const hsh=hfx.filter(f=>f.shots!=null);
+    const hshAvg=avS(hsh,f=>f.shots), hshRec=avS(hsh.slice(0,4),f=>f.shots);
+    if(hshAvg!=null && hshRec!=null && (hshAvg-hshRec)>=4) signals.push({
+      type:'shots',cat:'🏹 Tiri',filter:filt.label,
+      title:m.homeName+' — ritorno tiri (media '+hshAvg.toFixed(1)+' → recenti '+hshRec.toFixed(1)+')',
+      detail:'La squadra è significativamente sotto la media di tiri',
+      bets:['Over tiri '+m.homeName,'Over tiri in porta '+m.homeName],
+      conf:Math.min(74,46+(hshAvg-hshRec)*3), matchId:m.id, match:m.homeName+' vs '+m.awayName, leagueName:m.leagueName, date:m.date, time:m.time
+    });
+  }
+
+  // 12. H2H segnali
+  if(h2h.length>=5){
+    const h2hND=sk(h2h,x=>x.hg!==x.ag);
+    if(h2hND>=5) signals.push({
+      type:'h2h_nodraw',cat:'H2H no X',filter:'Scontri diretti',
+      title:m.homeName+' vs '+m.awayName+' — no pareggio da '+h2hND+' H2H',
+      detail:'Nessun pareggio negli ultimi '+h2hND+' scontri diretti',
+      bets:['No pareggio','Doppia chance 1 o 2'],
+      conf:Math.min(88,48+h2hND*5), matchId:m.id, match:m.homeName+' vs '+m.awayName, leagueName:m.leagueName, date:m.date, time:m.time
+    });
+    const h2hNB=sk(h2h,x=>x.hg===0||x.ag===0);
+    if(h2hNB>=4) signals.push({
+      type:'h2h_nobtts',cat:'H2H no BTTS',filter:'Scontri diretti',
+      title:m.homeName+' vs '+m.awayName+' — no BTTS da '+h2hNB+' H2H',
+      detail:'Almeno una squadra non segna in '+h2hNB+' scontri diretti consecutivi',
+      bets:['No BTTS','Under 1.5 gol'],
+      conf:Math.min(84,46+h2hNB*7), matchId:m.id, match:m.homeName+' vs '+m.awayName, leagueName:m.leagueName, date:m.date, time:m.time
+    });
+    const homeW=h2h.filter(x=>String(x.homeId)===String(m.homeId)&&x.hg>x.ag).length;
+    if(homeW/h2h.length>=0.65 && h2h.length>=6) signals.push({
+      type:'h2h_home',cat:'H2H dominio',filter:'Scontri diretti',
+      title:m.homeName+' domina gli H2H ('+homeW+'/'+h2h.length+')',
+      detail:'Vince il '+Math.round(homeW/h2h.length*100)+'% degli scontri diretti in casa',
+      bets:['Vittoria '+m.homeName,m.homeName+' Over 1.5'],
+      conf:Math.min(78,38+Math.round(homeW/h2h.length*50)), matchId:m.id, match:m.homeName+' vs '+m.awayName, leagueName:m.leagueName, date:m.date, time:m.time
+    });
+  }
+
+  // Rimuovi duplicati (stesso tipo+match+filter)
+  const seen=new Set();
+  return signals.filter(s=>{
+    const k=s.type+'|'+s.matchId+'|'+s.filter;
+    if(seen.has(k))return false;
+    seen.add(k);return true;
+  });
+}
+
+function filtFx(fx, key, compId, isHome){
+  if(key==='home') return fx.filter(f=>f.h===(isHome?1:0));
+  if(key==='comp') return fx.filter(f=>f.compId===compId);
+  if(key==='compHome') return fx.filter(f=>f.compId===compId&&f.h===(isHome?1:0));
+  return fx;
+}
+function avS(arr,sel){const v=arr.map(sel).filter(x=>x!=null&&!isNaN(x));return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;}
 
 const CAT_LABELS = {
   all:'Tutti',combo1h:'⚡ Combo 1°T',goal:'⚽ Segna',goal1h:'⚽ Segna 1°T',
@@ -321,13 +600,13 @@ const CAT_ORDER = ['combo1h','goal','goal1h','corner','shots','1hnl','1hnw','nod
 
 function renderAnalysis(){
   const j=ANALYSIS;
+  if(!j||!j.signals){document.getElementById('analisi-content').innerHTML='<div class="err">Nessun dato analisi.</div>';return;}
   const cats=CAT_ORDER.filter(c=>j.byType[c]&&j.byType[c].length>0);
-  // Cat bar
-  let html='<div class="cat-bar"><button class="cb '+(curCat==='all'?'on':'')+'" onclick="setCat(\'all\')">Tutti ('+j.signals.length+')</button>'+
+  let html='<div style="font-size:11px;color:#6B7488;margin-bottom:10px">'+j.signals.length+' segnali trovati'+(j.signals[0]?' · confidenza massima: '+j.signals[0].conf+'%':'')+'</div>';
+  html+='<div class="cat-bar"><button class="cb '+(curCat==='all'?'on':'')+'" onclick="setCat(\'all\')">Tutti ('+j.signals.length+')</button>'+
     cats.map(c=>'<button class="cb '+(curCat===c?'on':'')+'" onclick="setCat(\''+c+'\')">'+(CAT_LABELS[c]||c)+' ('+j.byType[c].length+')</button>').join('')+'</div>';
-  // Signals
   const filtered=curCat==='all'?j.signals:(j.byType[curCat]||[]);
-  html+=filtered.slice(0,50).map(s=>sigCard(s)).join('');
+  html+=filtered.slice(0,60).map(s=>sigCard(s)).join('');
   if(!filtered.length)html+='<div class="state">Nessun segnale per questa categoria oggi.</div>';
   document.getElementById('analisi-content').innerHTML=html;
 }
@@ -358,7 +637,6 @@ function sigCard(s){
 }
 
 function openMatchById(matchId){
-  // Passa alla tab partite e apri la partita
   const tabEl=document.querySelectorAll('.tab')[0];
   switchTab('partite',tabEl);
   setTimeout(()=>openMatch(matchId),100);
@@ -383,9 +661,9 @@ async function openMatch(id){
 
   // Controlla se i dati sono già in ANALYSIS
   let homeFx=null,awayFx=null,h2h=null;
-  if(ANALYSIS){
-    const md=ANALYSIS.matchData?.find(x=>String(x.id)===String(id));
-    if(md){homeFx=md.homeFx;awayFx=md.awayFx;h2h=md.h2h;}
+  if(ANALYSIS && ANALYSIS.matchDataMap && ANALYSIS.matchDataMap[id]){
+    const md=ANALYSIS.matchDataMap[id];
+    homeFx=md.homeFx;awayFx=md.awayFx;h2h=md.h2h;
   }
   if(!homeFx){
     try{
