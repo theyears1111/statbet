@@ -398,17 +398,18 @@ function renderAnalisi(detId){
       const fx=wFx(fFx(fxAll,flt.key,m.compId,isHome));
       if(fx.length<3)continue;
       const fx1h=fx.filter(f=>f.hgf!=null);
-      const fxXG=fx.filter(f=>f.xg!=null);
+      const fxXG=fx.filter(f=>f.xg!=null&&f.xgAvail);
       const fxCo=fx.filter(f=>f.corners!=null);
       const fxSh=fx.filter(f=>f.shots!=null);
 
       // 1. NON SEGNA streak
       const ngS=sk(fx,f=>(f.gf??0)===0);
       if(ngS>=2){
-        const xgSum=fxXG.slice(0,Math.max(ngS,3)).reduce((s,f)=>s+(f.xg??0),0);
-        const xg1hSum=fxXG.slice(0,Math.max(ngS,3)).reduce((s,f)=>s+(f.xg1h??0),0);
-        const bcTot=fx.slice(0,ngS).reduce((s,f)=>s+(f.bigChances??0),0);
-        const bcMiss=fx.slice(0,ngS).reduce((s,f)=>s+(f.bigChancesMissed??0),0);
+        const streakFx=fx.slice(0,ngS);
+        const xgSum=streakFx.reduce((s,f)=>s+(f.xg??0),0);
+        const xg1hSum=streakFx.reduce((s,f)=>s+(f.xg1h??0),0);
+        const bcTot=streakFx.reduce((s,f)=>s+(f.bigChances??0),0);
+        const bcMiss=streakFx.reduce((s,f)=>s+(f.bigChancesMissed??0),0);
         let conf=50;
         if(xgSum>=4)conf+=25;else if(xgSum>=2.5)conf+=15;else if(xgSum>=1.5)conf+=8;
         if(bcTot>=5)conf+=8;if(bcMiss>=3)conf+=7;if(ngS>=4)conf+=8;
@@ -416,10 +417,10 @@ function renderAnalisi(detId){
         results.push({
           type:'goal',conf,filter:flt.label,filterShort:flt.short,
           title:name+(isHome?' (Casa)':' (Trasferta)')+' non segna da '+ngS+' gare',
-          why:'xG accumulato nelle ultime '+Math.max(ngS,3)+' gare: '+avN(xgSum,2)+
+          why:'xG accumulato nelle '+ngS+' gare senza gol: '+avN(xgSum,2)+
               (xg1hSum>0?' · xG 1°T: '+avN(xg1hSum,2):'')+
               (bcTot>0?' · Big chances create: '+bcTot+(bcMiss>0?', mancate: '+bcMiss:''): ''),
-          bets:['Segna '+name,(isHome?'GG':'GG'),'Over 0.5 gol '+name],betCls:'goal',
+          bets:['Segna '+name,'GG','Over 0.5 gol '+name],betCls:'goal',
           name,isHome,ngS,xgSum
         });
         if(conf>=70) picks.push({bet:'Segna '+name+' / NG avversario',conf,why:name+' a secco da '+ngS+' gare · xG accum. '+avN(xgSum,2),lvl:conf>=80?'alta':'media',filter:flt.short});
