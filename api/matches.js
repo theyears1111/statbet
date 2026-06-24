@@ -68,6 +68,7 @@ async function buildMatches(key) {
             htHome: m.half_time_score?.home ?? null,
             htAway: m.half_time_score?.away ?? null,
             xgAvail: m.xg_available || false,
+            seasonId: m.season_id || null,
           });
         }
       }
