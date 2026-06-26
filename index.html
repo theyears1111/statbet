@@ -344,14 +344,24 @@ async function startAnalysis(firstTab){
 
   updateProg();
   const delay=ms=>new Promise(r=>setTimeout(r,ms));
+  async function fetchRetry(url,retries=3){
+    for(let i=0;i<retries;i++){
+      try{
+        const r=await fetch(url);
+        if(r.status===500||r.status===429){await delay(2000+i*1500);continue;}
+        if(!r.ok)return null;
+        return await r.json();
+      }catch(e){await delay(1500);}
+    }
+    return null;
+  }
 
   for(const team of teams){
     try{
-      await delay(500);
-      const r=await fetch('/api/team?id='+team.id);
-      const j=await r.json();
+      await delay(800);
+      const j=await fetchRetry('/api/team?id='+team.id);
       TEAM_DATA[team.id]={
-        fixtures: j.fixtures||[],
+        fixtures: j?.fixtures||[],
         name: team.name,
         isHome: team.isHome,
         match: team.match,
@@ -364,10 +374,9 @@ async function startAnalysis(firstTab){
     const h2hKey=m.homeId+'_'+m.awayId;
     if(!TEAM_DATA['h2h_'+h2hKey]){
       try{
-        await delay(300);
-        const r=await fetch('/api/h2h?home='+m.homeId+'&away='+m.awayId);
-        const j=await r.json();
-        TEAM_DATA['h2h_'+h2hKey]=j.h2h||[];
+        await delay(600);
+        const j=await fetchRetry('/api/h2h?home='+m.homeId+'&away='+m.awayId);
+        TEAM_DATA['h2h_'+h2hKey]=j?.h2h||[];
       }catch(e){ TEAM_DATA['h2h_'+h2hKey]=[]; }
     }
     done++;
