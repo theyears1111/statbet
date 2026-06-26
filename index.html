@@ -164,6 +164,8 @@ td{padding:11px 14px;vertical-align:middle}
   <div class="tabs">
     <div class="tab on" onclick="switchTab('partite',this)">📅 Partite</div>
     <div class="tab" onclick="switchTab('nonsegna',this)">⚽ Non Segna</div>
+    <div class="tab" onclick="switchTab('nonsegna1t',this)">⚽ Non Segna 1°T</div>
+    <div class="tab" onclick="switchTab('nonsegna2t',this)">⚽ Non Segna 2°T</div>
     <div class="tab" onclick="switchTab('nopareggio',this)">🔁 No Pareggio</div>
     <div class="tab" onclick="switchTab('corner',this)">🚩 Corner</div>
     <div class="tab" onclick="switchTab('primotempo',this)">⏱ 1° Tempo</div>
@@ -180,6 +182,14 @@ td{padding:11px 14px;vertical-align:middle}
     <div id="pan-nonsegna" class="pan">
       <div id="ns-content"></div>
       <div class="ov" id="ns-ov"><div class="det" id="ns-det"></div></div>
+    </div>
+    <!-- TAB NON SEGNA 1°T -->
+    <div id="pan-nonsegna1t" class="pan">
+      <div id="ns1t-content"></div>
+    </div>
+    <!-- TAB NON SEGNA 2°T -->
+    <div id="pan-nonsegna2t" class="pan">
+      <div id="ns2t-content"></div>
     </div>
     <!-- TAB NO PAREGGIO -->
     <div id="pan-nopareggio" class="pan">
@@ -290,7 +300,7 @@ function renderMatches(){
 // ── TAB ANALISI ──
 function openAnalysisTab(name){
   if(!ALL.length) return;
-  const contentId = {nonsegna:'ns-content',nopareggio:'np-content',corner:'co-content',primotempo:'pt-content'}[name];
+  const contentId = {nonsegna:'ns-content',nonsegna1t:'ns1t-content',nonsegna2t:'ns2t-content',nopareggio:'np-content',corner:'co-content',primotempo:'pt-content'}[name];
   if(!contentId) return;
   if(!ANALYSIS_DONE && !ANALYSIS_RUNNING){
     showStartBox(contentId, name);
@@ -317,7 +327,7 @@ function showStartBox(contentId, tabName){
 async function startAnalysis(firstTab){
   ANALYSIS_RUNNING=true;
   TEAM_DATA={};
-  const contentId={nonsegna:'ns-content',nopareggio:'np-content',corner:'co-content',primotempo:'pt-content'}[firstTab];
+  const contentId={nonsegna:'ns-content',nonsegna1t:'ns1t-content',nonsegna2t:'ns2t-content',nopareggio:'np-content',corner:'co-content',primotempo:'pt-content'}[firstTab];
 
   // Tutte le squadre uniche della settimana
   const teams = [];
@@ -402,7 +412,7 @@ async function startAnalysis(firstTab){
   ANALYSIS_RUNNING=false;
   renderTable(firstTab, contentId, curFilter);
   // Pre-renderizza anche le altre tab
-  for(const[tab,cid]of Object.entries({nonsegna:'ns-content',nopareggio:'np-content',corner:'co-content',primotempo:'pt-content'})){
+  for(const[tab,cid]of Object.entries({nonsegna:'ns-content',nonsegna1t:'ns1t-content',nonsegna2t:'ns2t-content',nopareggio:'np-content',corner:'co-content',primotempo:'pt-content'})){
     if(tab!==firstTab) renderTable(tab,cid,curFilter);
   }
 }
@@ -493,6 +503,157 @@ function calcNonSegna(teamId, filterKey){
   };
 }
 
+// ── CALCOLO NON SEGNA 1°T ──
+function calcNonSegna1T(teamId, filterKey){
+  const td=TEAM_DATA[teamId];
+  if(!td) return null;
+  const m=td.match;
+  const isHome=td.isHome;
+  const compId=m.compId;
+  const fxAll=getFilteredFx(teamId, filterKey, compId, isHome);
+  // Solo partite con dati primo tempo
+  const fx=fxAll.filter(f=>f.hgf!=null);
+  if(fx.length<3) return null;
+  // Non segna nel 1°T
+  const ngS=sk(fx,f=>(f.hgf??0)===0);
+  if(ngS<5) return null;
+  const streakFx=fx.slice(0,ngS);
+  // xG 1°T accumulato durante striscia
+  const xgSum=streakFx.reduce((s,f)=>s+(f.xg1h??0),0);
+  if(xgSum<1.0) return null;
+  const bcTot=streakFx.reduce((s,f)=>s+(f.bigChances1h??0),0);
+  const bcMiss=streakFx.reduce((s,f)=>s+(f.bigChancesMissed??0),0);
+  const savesTot=streakFx.filter(f=>f.saves1h!=null).reduce((s,f)=>s+(f.saves1h??0),0);
+  // Medie gol 1°T
+  const fxAll20=td.fixtures||[];
+  const fx1hAll=fxAll20.filter(f=>f.hgf!=null).slice(0,20);
+  const avgGf1h20=av(fx1hAll,f=>f.hgf)??0;
+  const fxComp1h=fxAll20.filter(f=>f.compId===compId&&f.hgf!=null);
+  const avgGf1hComp=fxComp1h.length>=3?(av(fxComp1h,f=>f.hgf)??0):null;
+  const fxHA1h=fx1hAll.filter(f=>f.h===(isHome?1:0));
+  const avgGf1hHA=fxHA1h.length>=3?(av(fxHA1h,f=>f.hgf)??0):null;
+  let conf=50;
+  if(xgSum>=3)conf+=25;else if(xgSum>=2)conf+=18;else if(xgSum>=1.5)conf+=12;else conf+=6;
+  if(bcTot>=5)conf+=10;else if(bcTot>=3)conf+=5;
+  if(bcMiss>=3)conf+=8;else if(bcMiss>=1)conf+=4;
+  if(ngS>=8)conf+=10;else if(ngS>=6)conf+=6;else if(ngS>=5)conf+=3;
+  if(avgGf1h20>=0.7)conf+=5;
+  conf=Math.min(96,conf);
+  return{
+    teamId,name:td.name,isHome,
+    nextMatch:m.homeName+' vs '+m.awayName,
+    nextDate:m.date,nextTime:m.time,
+    leagueName:m.leagueName,compId,
+    ngS,xgSum,bcTot,bcMiss,savesTot,
+    avgGf20:avgGf1h20,avgGfComp:avgGf1hComp,avgGfHA:avgGf1hHA,
+    conf,role:isHome?'Casa':'Trasferta'
+  };
+}
+
+// ── CALCOLO NON SEGNA 2°T ──
+function calcNonSegna2T(teamId, filterKey){
+  const td=TEAM_DATA[teamId];
+  if(!td) return null;
+  const m=td.match;
+  const isHome=td.isHome;
+  const compId=m.compId;
+  const fxAll=getFilteredFx(teamId, filterKey, compId, isHome);
+  // Solo partite con dati primo tempo (per calcolare gol 2°T = tot - 1°T)
+  const fx=fxAll.filter(f=>f.hgf!=null);
+  if(fx.length<3) return null;
+  // Gol 2°T = gol totali - gol 1°T
+  const fxWithG2=(fx.map(f=>({...f, gf2h:(f.gf??0)-(f.hgf??0)})));
+  const ngS=sk(fxWithG2,f=>f.gf2h===0);
+  if(ngS<5) return null;
+  const streakFx=fxWithG2.slice(0,ngS);
+  // xG 2°T = xG totale - xG 1°T
+  const xgSum=streakFx.reduce((s,f)=>s+((f.xg2h!=null?f.xg2h:(f.xg!=null&&f.xg1h!=null?f.xg-f.xg1h:0))),0);
+  if(xgSum<1.0) return null;
+  const bcTot=streakFx.reduce((s,f)=>s+(f.bigChances2h??0),0);
+  const bcMiss=streakFx.reduce((s,f)=>s+(f.bigChancesMissed2h??0),0);
+  const savesTot=streakFx.filter(f=>f.saves2h!=null).reduce((s,f)=>s+(f.saves2h??0),0);
+  // Medie gol 2°T
+  const fxAll20=td.fixtures||[];
+  const fx2hAll=fxAll20.filter(f=>f.hgf!=null).slice(0,20).map(f=>({...f,gf2h:(f.gf??0)-(f.hgf??0)}));
+  const avgGf2h20=av(fx2hAll,f=>f.gf2h)??0;
+  const fxComp2h=fxAll20.filter(f=>f.compId===compId&&f.hgf!=null).map(f=>({...f,gf2h:(f.gf??0)-(f.hgf??0)}));
+  const avgGf2hComp=fxComp2h.length>=3?(av(fxComp2h,f=>f.gf2h)??0):null;
+  const fxHA2h=fx2hAll.filter(f=>f.h===(isHome?1:0));
+  const avgGf2hHA=fxHA2h.length>=3?(av(fxHA2h,f=>f.gf2h)??0):null;
+  let conf=50;
+  if(xgSum>=3)conf+=25;else if(xgSum>=2)conf+=18;else if(xgSum>=1.5)conf+=12;else conf+=6;
+  if(bcTot>=5)conf+=10;else if(bcTot>=3)conf+=5;
+  if(bcMiss>=3)conf+=8;else if(bcMiss>=1)conf+=4;
+  if(ngS>=8)conf+=10;else if(ngS>=6)conf+=6;else if(ngS>=5)conf+=3;
+  if(avgGf2h20>=0.7)conf+=5;
+  conf=Math.min(96,conf);
+  return{
+    teamId,name:td.name,isHome,
+    nextMatch:m.homeName+' vs '+m.awayName,
+    nextDate:m.date,nextTime:m.time,
+    leagueName:m.leagueName,compId,
+    ngS,xgSum,bcTot,bcMiss,savesTot,
+    avgGf20:avgGf2h20,avgGfComp:avgGf2hComp,avgGfHA:avgGf2hHA,
+    conf,role:isHome?'Casa':'Trasferta'
+  };
+}
+
+// TABELLA NON SEGNA 1°T e 2°T (stessa struttura di Non Segna)
+function tableNonSegnaTempo(rows, tempo){
+  if(!rows.length) return '<div class="state">Nessuna squadra trovata. Prova un altro filtro.</div>';
+  const tabName=tempo==='1T'?'nonsegna1t':'nonsegna2t';
+  return '<div style="font-size:11px;color:#6B7488;margin-bottom:10px">'+rows.length+' squadre · streak ≥5 · xG '+tempo+' accum. ≥1.00 · clicca riga per dettaglio</div>'+
+  '<div class="tbl-wrap"><table>'+
+  '<colgroup><col style="min-width:200px"><col><col><col><col><col><col><col><col><col></colgroup>'+
+  '<thead><tr>'+
+  '<th style="text-align:left">Squadra / Partita</th>'+
+  thSort('Streak','ngS',tabName)+
+  thSort('xG acc. '+tempo,'xgSum',tabName)+
+  thSort('BC create','bcTot',tabName)+
+  thSort('BC mancate','bcMiss',tabName)+
+  thSort('Parate avv.','savesTot',tabName)+
+  thSort('⌀ Gol '+tempo+' ult.20','avgGf20',tabName)+
+  thSort('⌀ Gol '+tempo+' comp.','avgGfComp',tabName)+
+  thSort('⌀ Gol '+tempo+' C/T','avgGfHA',tabName)+
+  thSort('Conf.','conf',tabName)+
+  '</tr>'+
+  '<tr style="background:#0A0D13">'+
+  '<td class="sub-th" style="text-align:left"></td>'+
+  '<td class="sub-th">gare</td>'+
+  '<td class="sub-th">durante striscia</td>'+
+  '<td class="sub-th">durante striscia</td>'+
+  '<td class="sub-th">durante striscia</td>'+
+  '<td class="sub-th">somma striscia</td>'+
+  '<td class="sub-th">forma recente</td>'+
+  '<td class="sub-th">torneo partita</td>'+
+  '<td class="sub-th">casa/trasf.</td>'+
+  '<td class="sub-th"></td></tr>'+
+  '</thead><tbody>'+
+  rows.map(r=>{
+    const cls=r.ngS>=8?'hot':r.ngS>=6?'warm':'';
+    return '<tr class="'+cls+'">'+
+      '<td>'+
+        '<div class="td-team">'+r.name+' <span style="font-size:10px;color:#6B7488;background:#1A202C;padding:1px 5px;border-radius:4px">'+r.role+'</span></div>'+
+        '<div class="td-match">'+r.nextDate+' '+r.nextTime.slice(0,5)+' · '+r.nextMatch+'</div>'+
+        '<div class="td-comp">'+r.leagueName+'</div>'+
+      '</td>'+
+      '<td style="text-align:center"><div class="td-num '+(r.ngS>=8?'hot':r.ngS>=6?'warm':'cool')+'" style="font-size:22px;font-weight:700">'+r.ngS+'</div></td>'+
+      '<td style="text-align:center">'+
+        '<div class="td-num '+(r.xgSum>=3?'hot':r.xgSum>=2?'warm':'cool')+'" style="font-size:18px">'+avN(r.xgSum,2)+'</div>'+
+        '<div class="xg-bar"><div class="xg-fill" style="width:'+Math.min(100,r.xgSum/4*100)+'%"></div></div>'+
+      '</td>'+
+      '<td style="text-align:center"><div class="td-num '+(r.bcTot>=8?'hot':r.bcTot>=4?'warm':'')+'">'+r.bcTot+'</div></td>'+
+      '<td style="text-align:center"><div class="td-num '+(r.bcMiss>=6?'hot':r.bcMiss>=3?'warm':'')+'">'+r.bcMiss+'</div></td>'+
+      '<td style="text-align:center"><div class="td-num '+(r.savesTot>=10?'hot':r.savesTot>=5?'warm':'')+'">'+r.savesTot+'</div></td>'+
+      '<td style="text-align:center"><div class="td-num '+(r.avgGf20>=0.8?'hot':r.avgGf20>=0.5?'warm':'')+'">'+avN(r.avgGf20)+'</div></td>'+
+      '<td style="text-align:center">'+(r.avgGfComp!=null?'<div class="td-num '+(r.avgGfComp>=0.8?'hot':r.avgGfComp>=0.5?'warm':'')+'">'+avN(r.avgGfComp)+'</div>':'<span style="color:#525B6F;font-size:11px">n/d</span>')+'</td>'+
+      '<td style="text-align:center">'+(r.avgGfHA!=null?'<div class="td-num '+(r.avgGfHA>=0.8?'hot':r.avgGfHA>=0.5?'warm':'')+'">'+avN(r.avgGfHA)+'<div style="font-size:8px;color:#525B6F">'+(r.isHome?'casa':'trasf.')+'</div></div>':'<span style="color:#525B6F;font-size:11px">n/d</span>')+'</td>'+
+      '<td style="text-align:center"><div style="color:'+confColor(r.conf)+';font-size:15px;font-weight:700">'+r.conf+'%</div></td>'+
+    '</tr>';
+  }).join('')+
+  '</tbody></table></div>';
+}
+
 // ── CALCOLO NO PAREGGIO ──
 function calcNoPareggio(teamId, filterKey){
   const td=TEAM_DATA[teamId];
@@ -567,9 +728,13 @@ function renderTable(tabName, contentId, filterKey){
 
   if(tabName==='nonsegna'){
     rows=allTeamIds.map(id=>calcNonSegna(id,filterKey)).filter(Boolean);
-    const sorted=sortRows(rows,'ngS',true);
-    const html=filterBar+tableNonSegna(sorted);
-    document.getElementById(contentId).innerHTML=html;
+    document.getElementById(contentId).innerHTML=filterBar+tableNonSegna(sortRows(rows,'ngS',true));
+  } else if(tabName==='nonsegna1t'){
+    rows=allTeamIds.map(id=>calcNonSegna1T(id,filterKey)).filter(Boolean);
+    document.getElementById(contentId).innerHTML=filterBar+tableNonSegnaTempo(sortRows(rows,'ngS',true),'1T');
+  } else if(tabName==='nonsegna2t'){
+    rows=allTeamIds.map(id=>calcNonSegna2T(id,filterKey)).filter(Boolean);
+    document.getElementById(contentId).innerHTML=filterBar+tableNonSegnaTempo(sortRows(rows,'ngS',true),'2T');
   } else if(tabName==='nopareggio'){
     rows=allTeamIds.map(id=>calcNoPareggio(id,filterKey)).filter(Boolean);
     const sorted=sortRows(rows,'ndS',true);
@@ -586,7 +751,7 @@ function renderTable(tabName, contentId, filterKey){
 
 function setAnFilter(key, tabName){
   curFilter=key;
-  const contentId={nonsegna:'ns-content',nopareggio:'np-content',corner:'co-content',primotempo:'pt-content'}[tabName];
+  const contentId={nonsegna:'ns-content',nonsegna1t:'ns1t-content',nonsegna2t:'ns2t-content',nopareggio:'np-content',corner:'co-content',primotempo:'pt-content'}[tabName];
   renderTable(tabName, contentId, key);
 }
 
@@ -597,7 +762,7 @@ function sortRows(rows, col, desc){
 function setSortCol(col,tabName){
   if(sortCol===col)sortDir*=-1;
   else{sortCol=col;sortDir=1;}
-  const contentId={nonsegna:'ns-content',nopareggio:'np-content',corner:'co-content',primotempo:'pt-content'}[tabName];
+  const contentId={nonsegna:'ns-content',nonsegna1t:'ns1t-content',nonsegna2t:'ns2t-content',nopareggio:'np-content',corner:'co-content',primotempo:'pt-content'}[tabName];
   renderTable(tabName,contentId,curFilter);
 }
 
