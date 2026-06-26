@@ -6,14 +6,15 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function apiFetch(path, key, params = {}) {
   const url = new URL(API_BASE + path);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 5; i++) {
     const res = await fetch(url.toString(), { headers: { "Authorization": `Bearer ${key}` } });
     const json = await res.json();
-    if (res.status === 429) { await sleep(1500); continue; }
+    if (res.status === 429) { await sleep(2000 + i * 1000); continue; }
+    if (res.status === 500) { await sleep(1500 + i * 500); continue; }
     if (!res.ok) throw new Error(`${res.status}`);
     return json;
   }
-  throw new Error("Rate limit");
+  throw new Error("Rate limit persistente");
 }
 
 function teamView(match, teamId) {
@@ -97,10 +98,10 @@ export default async function handler(req, res) {
     const r = await apiFetch("/matches", key, { team_id: teamId, status: "finished", per_page: 20 });
     const matches = r.data || [];
     const fixtures = matches.map(m => teamView(m, teamId));
-    const withXG = fixtures.filter(f => f.xgAvail).slice(0, 10);
+    const withXG = fixtures.filter(f => f.xgAvail).slice(0, 8);
     for (const f of withXG) {
       try {
-        await sleep(350);
+        await sleep(500);
         const sr = await apiFetch(`/matches/${f.matchId}/stats`, key);
         const s = extractStats(sr.data, f.h === 1);
         Object.assign(f, s);
