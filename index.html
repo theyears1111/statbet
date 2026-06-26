@@ -344,43 +344,58 @@ async function startAnalysis(firstTab){
 
   updateProg();
   const delay=ms=>new Promise(r=>setTimeout(r,ms));
-  async function fetchRetry(url,retries=3){
-    for(let i=0;i<retries;i++){
+
+  async function fetchWithRetry(url, maxRetries=4){
+    for(let i=0;i<maxRetries;i++){
       try{
         const r=await fetch(url);
-        if(r.status===500||r.status===429){await delay(2000+i*1500);continue;}
+        if(r.status===429||r.status===500){
+          const wait=3000+i*2000;
+          console.log('Rate limit/500, aspetto '+wait+'ms, tentativo '+(i+1));
+          await delay(wait);
+          continue;
+        }
         if(!r.ok)return null;
         return await r.json();
-      }catch(e){await delay(1500);}
+      }catch(e){ await delay(2000); }
     }
     return null;
   }
 
-  for(const team of teams){
-    try{
-      await delay(800);
-      const j=await fetchRetry('/api/team?id='+team.id);
-      TEAM_DATA[team.id]={
-        fixtures: j?.fixtures||[],
-        name: team.name,
-        isHome: team.isHome,
-        match: team.match,
-      };
-    }catch(e){
-      TEAM_DATA[team.id]={fixtures:[],name:team.name,isHome:team.isHome,match:team.match};
-    }
-    // Carica anche H2H per questa partita
-    const m=team.match;
-    const h2hKey=m.homeId+'_'+m.awayId;
-    if(!TEAM_DATA['h2h_'+h2hKey]){
+  // Carica a gruppetti di 3 con pausa tra gruppi
+  const GROUP_SIZE=3;
+  const GROUP_PAUSE=4000; // 4 secondi tra gruppi
+
+  for(let gi=0;gi<teams.length;gi+=GROUP_SIZE){
+    const group=teams.slice(gi,gi+GROUP_SIZE);
+    for(const team of group){
       try{
-        await delay(600);
-        const j=await fetchRetry('/api/h2h?home='+m.homeId+'&away='+m.awayId);
-        TEAM_DATA['h2h_'+h2hKey]=j?.h2h||[];
-      }catch(e){ TEAM_DATA['h2h_'+h2hKey]=[]; }
+        await delay(1000);
+        const j=await fetchWithRetry('/api/team?id='+team.id);
+        TEAM_DATA[team.id]={
+          fixtures:j?.fixtures||[],
+          name:team.name,isHome:team.isHome,match:team.match
+        };
+      }catch(e){
+        TEAM_DATA[team.id]={fixtures:[],name:team.name,isHome:team.isHome,match:team.match};
+      }
+      // H2H
+      const m=team.match;
+      const h2hKey=m.homeId+'_'+m.awayId;
+      if(!TEAM_DATA['h2h_'+h2hKey]){
+        try{
+          await delay(800);
+          const j=await fetchWithRetry('/api/h2h?home='+m.homeId+'&away='+m.awayId);
+          TEAM_DATA['h2h_'+h2hKey]=j?.h2h||[];
+        }catch(e){ TEAM_DATA['h2h_'+h2hKey]=[]; }
+      }
+      done++;
+      updateProg();
     }
-    done++;
-    updateProg();
+    // Pausa tra gruppi (tranne dopo l'ultimo)
+    if(gi+GROUP_SIZE<teams.length){
+      await delay(GROUP_PAUSE);
+    }
   }
 
   ANALYSIS_DONE=true;
